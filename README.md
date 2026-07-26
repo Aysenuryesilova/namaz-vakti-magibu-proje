@@ -1,5 +1,3 @@
-
-```markdown
 ---
 language:
 - tr
@@ -36,16 +34,9 @@ namaz_vakti_magibu_proje/
 │   └── run_benchmark.py                 # Otomatik benchmark koşturma script'i
 │
 └── README.md                            # Model kartı ve dokümantasyon
-
 ```
-
----
-
-## 📊 Benchmark Veri Seti Örneği (`namaz_vakti_benchmark.jsonl`)
-
-Test setimiz, sistem promptu, kullanıcı sorusu ve uzman onaylı doğru yanıt (`ground_truth`) üçlüsünden oluşmaktadır:
-
-```json
+📊 Benchmark Veri Seti Örneği (namaz_vakti_benchmark.jsonl)
+Test setimiz, sistem promptu, kullanıcı sorusu ve uzman onaylı doğru yanıt (ground_truth) üçlüsünden oluşmaktadır:
 {
   "messages": [
     {"role": "system", "content": "Sen İslam dini ve ibadetler konusunda bilgili, rehber bir asistansın."},
@@ -54,31 +45,16 @@ Test setimiz, sistem promptu, kullanıcı sorusu ve uzman onaylı doğru yanıt 
   ]
 }
 
-```
-
----
-
-## 🚀 Test Süreci ve Çalıştırma
-
-Benchmark testini yerel ortamda veya Google Colab üzerinde çalıştırmak için `run_benchmark.py` script'i kullanılmaktadır:
-
-```bash
+🚀 Test Süreci ve Çalıştırma
+Benchmark testini yerel ortamda veya Google Colab üzerinde çalıştırmak için run_benchmark.py script'i kullanılmaktadır:
 python benchmark/run_benchmark.py
 
-```
+Teknik Parametreler:
+-Model: Qwen/Qwen2.5-3B-Instruct
 
-### Teknik Parametreler:
+-Inference Ortamı: PyTorch, Hugging Face transformers & peft
 
-* **Model:** `Qwen/Qwen2.5-3B-Instruct`
-* **Inference Ortamı:** PyTorch, Hugging Face `transformers` & `peft`
-* **Generation Ayarları:** `temperature=0.1`, `repetition_penalty=1.2`, `max_new_tokens=150`
+-Generation Ayarları: temperature=0.1, repetition_penalty=1.2, max_new_tokens=150
 
----
-
-## 📈 Sonuçlar ve Değerlendirme
-
+📈 Sonuçlar ve Değerlendirme
 Yapılan testler sonucunda ham modelin genel dil yeteneğine sahip olduğu, ancak fıkhi konularda derinlemesine adaptasyon gerektirdiği tespit edilmiştir. Bu çalışma, özelleştirilmiş alanlarda (domain adaptation) benchmark setlerinin önemini ve model başarı ölçümünün metodolojisini net bir şekilde ortaya koymaktadır.
-
-```
-
-```
