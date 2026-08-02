@@ -1,0 +1,36 @@
+{# 
+  Custom Chat Template (Jinja2) - Dini İlimler & Tool Calling Asistanı
+  Bu şablon; modelin Sistem, Kullanıcı, Asistan ve Araç (Tool) mesajlarını 
+  birbirinden doğru ayırt edebilmesi için tasarlanmıştır.
+#}
+
+{# 1. Eğer varsa System (Sistem) mesajını modelin anlayacağı başlıkla başlatıyoruz #}
+{%- if messages[0]['role'] == 'system' -%}
+    {{- "<|im_start|>system\n" + messages[0]['content'] + "<|im_end|>\n" -}}
+    {%- set loop_start = 1 -%}
+{%- else -%}
+    {{- "<|im_start|>system\nSen güvenilir bir Dini İlimler ve Fıkıh Asistanısın. Verilen araçları kullanarak doğru yanıtlar üretirsin.<|im_end|>\n" -}}
+    {%- set loop_start = 0 -%}
+{%- endif -%}
+
+{# 2. Mesaj dizisini (history) döngüye sokup rollere göre etiketliyoruz #}
+{%- for message in messages[loop_start:] -%}
+    {%- if message['role'] == 'user' -%}
+        {{- "<|im_start|>user\n" + message['content'] + "<|im_end|>\n" -}}
+    {%- elif message['role'] == 'assistant' -%}
+        {# Eğer asistan bir araç çağrısı (tool_calls) yaptıysa onu özel blokla sarıyoruz #}
+        {%- if message.get('tool_calls') -%}
+            {{- "<|im_start|>assistant\n<tool_call>\n" + message['tool_calls'] | string + "\n</tool_call><|im_end|>\n" -}}
+        {%- else -%}
+            {{- "<|im_start|>assistant\n" + message['content'] + "<|im_end|>\n" -}}
+        {%- endif -%}
+    {%- elif message['role'] == 'tool' -%}
+        {# Araçtan (veritabanından) dönen sonuçları modele geri besliyoruz #}
+        {{- "<|im_start|>tool\n<tool_response>\n" + message['content'] + "\n</tool_response><|im_end|>\n" -}}
+    {%- endif -%}
+{%- endfor -%}
+
+{# 3. Modelin yanıt verebilmesi için son alanı açıyoruz #}
+{%- if add_generation_prompt -%}
+    {{- "<|im_start|>assistant\n" -}}
+{%- endif -%}
