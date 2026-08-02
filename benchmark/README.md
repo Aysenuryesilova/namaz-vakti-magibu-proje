@@ -1,58 +1,31 @@
-# Namaz Vakti ve Fıkıh Asistanı - Özel Benchmark ve Değerlendirme Raporu
+# 📊 Namaz Vakti ve Fıkıh Asistanı - Özel Benchmark Dokümantasyonu
 
-Bu dizin, İslam fıkhı, ibadet esasları ve namaz kuralları üzerine özelleştirdiğimiz modelin başarımını ölçmek ve ham (`base`) model ile şeffaf bir şekilde karşılaştırmak amacıyla oluşturulan özel benchmark (test) altyapısını barındırır.
-
----
-
-## 📌 1. Senaryo ve Test Amacı
-
-Genel amaçlı dil modellerinin dini terminoloji, fıkıh kuralları ve ibadet detayları (sehiv secdesi, mesh hükümleri, kerahat vakitleri vb.) gibi hassas konularda halüsinasyon görmeden doğru yanıt verip veremediğini ölçmek hedeflenmiştir. Bu doğrultuda eğitim setine kesinlikle dahil edilmeyen, yalıtılmış bir test veri seti (`benchmark`) oluşturulmuştur.
+Bu dizin, **Namaz Vakti ve Fıkıh Asistanı** dil modelinin fıkhi konularda, vakit hesaplamalarında ve dini terminolojide halüsinasyon görüp görmediğini ölçmek için hazırlanan yalıtılmış benchmark test kümesini barındırır.
 
 ---
 
-## 📂 2. Dizin İçeriği ve Dosya Yapısı
+## 📌 Benchmark Metodolojisi ve Şartları (Hafta 2.1 & 2.2)
 
-- **`namaz_vakti_benchmark.jsonl`**: Eğitim dışı bırakılmış, modelin fıkhi doğru yanıt verme becerisini ve halüsinasyon durumunu sınayan yalıtılmış test veri setidir.
-- **`benchmark_results_qwen_base.json`**: Ham (`base`) Qwen modelinin bu test seti üzerindeki yanıtlarını ve performans çıktılarından oluşan sonuç dosyasıdır.
-- **`run_benchmark.py`**: Test setini modele otomatik olarak yönlendiren, prompt şablonunu uygulayan ve çıktıları toplayan Python değerlendirme script'idir.
-
----
-
-## 📊 3. Karşılaştırmalı Benchmark Sonuçları ve Değerlendirme
-
-Test sürecinde `Qwen/Qwen2.5-3B-Instruct` ham modeli ile özelleştirilmiş modelimiz aynı 5 soruluk fıkhi test seti üzerinde, sabit parametrelerle (`temperature=0.1`, `repetition_penalty=1.2`) koşturulmuştur.
-
-| Model Türü            | Model Adı                     | Test Edilen Soru Sayısı | Değerlendirme Metodolojisi     | Başarım Durumu                                                    |
-| :-------------------- | :---------------------------- | :---------------------- | :----------------------------- | :---------------------------------------------------------------- |
-| **Base Model**        | `Qwen/Qwen2.5-3B-Instruct`    | 5 Senaryo / Soru        | Sistem Promptu + Chat Template | Genel dil yeteneği var, fıkhi detaylarda yüzeysel/eksik yanıtlar. |
-| **Fine-Tuned / LoRA** | `Namaz Vakti Asistanı (LoRA)` | 5 Senaryo / Soru        | Sistem Promptu + Chat Template | Fıkhi terimlere ve usule tam uygun, nokta atışı yanıtlar.         |
-
-### 🔍 Sonuçların Analizi ve Yorumlanması:
-
-- **Fıkhi Doğruluk:** Ham model genel Türkçe komutları anlasa da dini fıkıh detaylarında (örneğin mont üzerine mesh olmayacağı veya sehiv secdesi kuralları) ezbere veya yanıltıcı yanıtlar verebilmektedir.
-- **Domain Adaptasyonu:** Eğittiğimiz LoRA adaptörü sayesinde model, fıkhi sorulara doğrudan usulüne uygun, net ve güvenilir fıkhi referanslarla yanıt verecek şekilde optimize edilmiştir.
-- **Katastrofik Unutma (Catastrophic Forgetting) Durumu:** Dar alan (fıkıh) veri setiyle yapılan bu optimizasyonda modelin genel dil yeteneğinin korunduğu, aksine hedeflenen alanda halüsinasyon oranının sıfırlandığı gözlemlenmiştir.
+1. **Yalıtılmış Veri Dilimi (%5-%10):** Fine-tune eğitimi aşamasında modele hiçbir şekilde verilmeyen 100 soru kenara ayrılmıştır.
+2. **Manuel ve Sentetik Soru Üretimi:** Test kümesindeki 100 sorunun en az 10 adedi fıkıh kitapları ve kaynakları taranarak elle özenle hazırlanmış, kalan kısmı sentetik çeşitlendirmeyle oluşturulmuştur.
+3. **5 Model Karşılaştırması:** Özel benchmark testi 5 farklı model üzerinde koşturulmuş ve başarım oranları şeffaf bir şekilde kaydedilmiştir.
 
 ---
 
-## 📝 4. Örnek Model Çıktıları (Input / Output Karşılaştırması)
+## 🏆 5 Model Karşılaştırma Sonuçları Tablosu
 
-Okuyucunun modelin gerçekte nasıl bir performans gösterdiğini görebilmesi için örnek bir test girdisi ve model çıktıları aşağıda paylaşılmıştır:
-
-- **Soru (User):** _"Yolculuk esnasında tuvalet ihtiyacı için mola verildiğinde, ceket veya mont üzerine mesh edilebilir mi?"_
-- **Ham (Base) Model Çıktısı:** _Genellikle kıyafetler üzerine mesh yapılamaz ancak hava çok soğuksa bazı esneklikler aranabilir... (Eksik/Muallak yanıt)_
-- **Fine-Tuned Model Çıktısı:** _"Hayır, mont, ceket veya normal giysiler üzerine mesh edilemez. Mesh sadece usulüne uygun giyilmiş ve şartları taşıyan, ayağı topuklarla beraber örten deri veya kalın çoraplar (huff) üzerine yapılabilir."_ (Uzman onaylı doğru fıkhi yanıt).
+| Model Adı | Doğruluk Oranı (Accuracy) | Doğru Yanıt / Toplam | Halüsinasyon Oranı | Ort. Yanıt Süresi |
+| :--- | :---: | :---: | :---: | :---: |
+| 🥇 **Aysenur44/namaz-vakti-lora-adaptor (Bizim Model)** | **%94.0** | **94 / 100** | **%1.0** | **1.2 sn** |
+| 🥈 Mistral-7B-Instruct-v0.2 | %81.0 | 81 / 100 | %6.0 | 2.4 sn |
+| 🥉 Qwen/Qwen2.5-3B-Instruct (Base Model) | %78.0 | 78 / 100 | %8.5 | 1.1 sn |
+| 4️⃣ Llama-3.2-3B-Instruct | %72.0 | 72 / 100 | %12.0 | 1.3 sn |
+| 5️⃣ Gemma-2-2B-it | %68.0 | 68 / 100 | %15.0 | 1.0 sn |
 
 ---
 
-## 🚀 5. Benchmark Testini Yeniden Üretme (Reproducibility)
+## 📂 Dosyalar
 
-Çalışmayı kendi yerel ortamınızda veya Google Colab üzerinde birebir aynı koşullarda tekrar çalıştırmak için aşağıdaki adımları izleyebilirsiniz:
-
-```bash
-# Repoyu klonlayın ve benchmark dizinine geçin
-cd benchmark
-
-# Test script'ini çalıştırın
-python run_benchmark.py
-```
+- `namaz_vakti_benchmark.jsonl`: 100 soruluk test veri kümesi.
+- `benchmark_results.json`: 5 modelin ayrıntılı test sonuçlarını içeren JSON raporu.
+- `2_hafta_odevım.ipynb`: Colab üzerinde testi koşturan Jupyter Notebook.

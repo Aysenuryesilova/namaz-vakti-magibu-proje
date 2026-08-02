@@ -1,5 +1,5 @@
 """
-tools.py - Tool Calling Fonksiyonları ve Şemaları
+tools.py - Tool Calling Fonksiyonları ve JSON Şemaları
 Bu dosya, modelin dış dünya ile iletişim kurmasını sağlar. Aladhan API ve SQLite 
 veritabanı işlemlerini modelin çağırabileceği fonksiyonlar haline getirir.
 """
@@ -9,101 +9,116 @@ from database import save_inquiry, get_all_inquiries
 
 def get_prayer_times(city: str, country: str = "Turkey") -> dict:
     """
-    Tool 1: Belirtilen şehir için Aladhan API'den namaz vakitlerini çeker (Veri Okuma).
+    Tool 1: Belirtilen şehir için Aladhan API'den namaz vakitlerini çeker (Public API - Veri Okuma).
     """
     try:
         url = f"https://api.aladhan.com/v1/timingsByCity?city={city}&country={country}&method=13"
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)
         data = response.json()
         if response.status_code == 200 and data.get("code") == 200:
             timings = data["data"]["timings"]
+            date_info = data["data"]["date"]["readable"]
             return {
                 "status": "success",
-                "city": city,
+                "city": city.title(),
+                "country": country.title(),
+                "date": date_info,
                 "prayer_times": {
-                    "Imsak": timings.get("Fajr"),
-                    "Gunes": timings.get("Sunrise"),
-                    "Ogle": timings.get("Dhuhr"),
-                    "Ikindi": timings.get("Asr"),
-                    "Aksam": timings.get("Maghrib"),
-                    "Yatsi": timings.get("Isha")
+                    "İmsak": timings.get("Fajr"),
+                    "Güneş": timings.get("Sunrise"),
+                    "Öğle": timings.get("Dhuhr"),
+                    "İkindi": timings.get("Asr"),
+                    "Akşam": timings.get("Maghrib"),
+                    "Yatsı": timings.get("Isha")
                 },
-                "source": "Aladhan API (Diyanet Metodu)"
+                "source": "Aladhan API (Diyanet Metodu - Method 13)"
             }
         else:
-            return {"status": "error", "message": "Vakit bilgisi alınamadı."}
+            return {"status": "error", "message": f"{city} için vakit bilgisi alınamadı."}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": f"API Bağlantı Hatası: {str(e)}"}
 
-def create_user_inquiry(topic: str, question: str) -> dict:
+def save_inquiry_tool(topic: str, question: str, user_name: str = "Anonim") -> dict:
     """
-    Tool 2: Kullanıcının sorduğu fıkhi soruyu veya talebi SQLite veritabanına kaydeder (Veri Yazma).
+    Tool 2: Fıkhi soru veya fetva kaydını SQLite veritabanına ekler (Veritabanı - Veri Yazma).
     """
-    try:
-        inquiry_id = save_inquiry(topic, question)
-        return {
-            "status": "success",
-            "message": f"Talebiniz başarıyla veritabanına kaydedildi. Kayıt ID: {inquiry_id}",
-            "inquiry_id": inquiry_id,
-            "topic": topic,
-            "question": question
-        }
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    return save_inquiry(topic=topic, question=question, user_name=user_name)
 
-def list_user_inquiries() -> dict:
+def get_all_inquiries_tool() -> dict:
     """
-    Tool 3: Veritabanındaki kayıtlı soru ve talepleri listeler (Veri Okuma).
+    Tool 3: Veritabanındaki tüm soru ve fetva kayıtlarını listeler (Veritabanı - Veri Okuma).
     """
-    try:
-        inquiries = get_all_inquiries()
-        return {
-            "status": "success",
-            "total_records": len(inquiries),
-            "inquiries": inquiries,
-            "source": "SQLite Yerel Veritabanı"
-        }
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    return get_all_inquiries()
 
-# Modelin hangi araçları çağırabileceğini anladığı JSON Şema Tanımları (Tool Schema)
+# Kullanılabilir araçlar sözlüğü
+AVAILABLE_TOOLS = {
+    "get_prayer_times": get_prayer_times,
+    "save_inquiry_tool": save_inquiry_tool,
+    "get_all_inquiries_tool": get_all_inquiries_tool
+}
+
+# Hafta 3.1 & 3.2 gereksinimi: Model için JSON Şeması (Tool Definitions)
 TOOLS_SCHEMA = [
     {
-        "name": "get_prayer_times",
-        "description": "Türkiye veya dünya şehirlerinin günlük namaz/ezan vakitlerini getirir.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "city": {"type": "string", "description": "Şehir adı (Örn: Ankara, Istanbul)"}
-            },
-            "required": ["city"]
+        "type": "function",
+        "function": {
+            "name": "get_prayer_times",
+            "description": "Belirtilen şehir ve ülke için Diyanet metoduna göre günlük namaz vakitlerini çeker.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "city": {
+                        "type": "string",
+                        "description": "Namaz vakti istenen şehir adı (ör: Istanbul, Ankara, Izmir, Malatya)"
+                    },
+                    "country": {
+                        "type": "string",
+                        "description": "Ülke adı. Varsayılan 'Turkey'.",
+                        "default": "Turkey"
+                    }
+                },
+                "required": ["city"]
+            }
         }
     },
     {
-        "name": "create_user_inquiry",
-        "description": "Kullanıcının fıkhi sorusunu veya fetva talebini SQLite veritabanına kaydeder.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "topic": {"type": "string", "description": "Konu başlığı (Örn: Abdest, Oruç, Namaz)"},
-                "question": {"type": "string", "description": "Kullanıcının sorduğu soru veya talep metni"}
-            },
-            "required": ["topic", "question"]
+        "type": "function",
+        "function": {
+            "name": "save_inquiry_tool",
+            "description": "Kullanıcının fıkhi sorusunu veya fetva danışmasını SQLite veritabanına kaydeder.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "description": "Sorunun ana konusu (ör: Namaz, Oruç, Abdest, Sehiv Secdesi, Zekat)"
+                    },
+                    "question": {
+                        "type": "string",
+                        "description": "Kullanıcının sorduğu detaylı fıkhi soru"
+                    },
+                    "user_name": {
+                        "type": "string",
+                        "description": "Soruyu soran kişinin adı (Varsayılan: Anonim)",
+                        "default": "Anonim"
+                    }
+                },
+                "required": ["topic", "question"]
+            }
         }
     },
     {
-        "name": "list_user_inquiries",
-        "description": "Veritabanında kayıtlı olan tüm soru ve talepleri listeler.",
-        "parameters": {
-            "type": "object",
-            "properties": {}
+        "type": "function",
+        "function": {
+            "name": "get_all_inquiries_tool",
+            "description": "Veritabanında kayıtlı tüm fıkhi soru ve fetva taleplerini listeler.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
         }
     }
 ]
 
-# Fonksiyon isimlerini gerçek python fonksiyonlarıyla eşleştiren harita (Dictionary)
-AVAILABLE_TOOLS = {
-    "get_prayer_times": get_prayer_times,
-    "create_user_inquiry": create_user_inquiry,
-    "list_user_inquiries": list_user_inquiries
-}
+if __name__ == "__main__":
+    print("Test get_prayer_times('Istanbul'):", get_prayer_times("Istanbul"))

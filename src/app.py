@@ -1,37 +1,130 @@
 """
-app.py - Gradio Web Arayüzü (ChatInterface Kararlı Sürüm)
+app.py - Gradio Web Arayüzü (Hugging Face Spaces & Yerel Kullanım İçin Uçtan Uca Arayüz)
 """
 
 import gradio as gr
 from agent import IslamicToolCallingAgent
+from database import get_all_inquiries
 
-# Ajan sınıfımızı başlatıyoruz
+# Ajan motorumuzu başlatıyoruz
 agent = IslamicToolCallingAgent()
 
-def model_response(user_message, history):
-    """Kullanıcı mesajını alır, ajanı çalıştırır ve doğrudan metin yanıtı döner."""
-    if not user_message.strip():
-        return "Lütfen bir soru yazın."
-    
-    # Ajanı çalıştırıp yanıt ve trace logları alıyoruz
-    final_answer, trace_logs, jinja_prompt = agent.run(user_message)
-    
-    # Trace logları ve Jinja2 promptunu birleştirip şık bir format oluşturuyoruz
-    logs_formatted = f"=== JINJA2 ŞABLON ÇIKTISI ===\n{jinja_prompt}\n\n=== TOOL CALLING TRACE LOGS ===\n"
-    for log in trace_logs:
-        logs_formatted += f"Turn {log['turn']}: Araç -> {log['tool_name']}\nGirdi -> {log['arguments']}\nYanıt -> {log['response']}\n\n"
-    
-    # Gradio ChatInterface için yanıtı ve arka plan loglarını konsola veya ekrana basabiliriz.
-    # Burada kullanıcıya hem asistan yanıtını hem de alt kısımda ödev modunu sunuyoruz.
-    return f"{final_answer}\n\n---\n\n🔍 **Ödev Modu (Trace & Jinja2 Logları):**\n```text\n{logs_formatted}\n```"
+def process_query(user_message, history):
+    """Kullanıcı mesajını alır, ajanı çalıştırır ve hem sohbet cevabını hem de trace loglarını üretir."""
+    if not user_message or not user_message.strip():
+        return "", history, "Lütfen geçerli bir soru girin.", ""
 
-# Gradio'nun en kararlı arayüz bileşeni (ChatInterface) ile hata ihtimalini sıfırlıyoruz
-demo = gr.ChatInterface(
-    fn=model_response,
-    title="🕌 Dini İlimler & Tool-Calling Asistanı",
-    description="Bu proje; Jinja2 Chat Template, SQLite Veritabanı (Veri Okuma/Yazma) ve Aladhan API entegrasyonuyla geliştirilmiştir.",
-    theme=gr.themes.Soft()
-)
+    # Ajanı çalıştırıp yanıt, trace logları ve Jinja2 promptunu alıyoruz
+    final_answer, trace_logs, jinja_prompt = agent.run(user_message)
+
+    # Log formatlama
+    logs_formatted = f"=== JINJA2 ŞABLON ÇIKTISI (Hafta 3.2 1. Ödev) ===\n{jinja_prompt}\n\n"
+    logs_formatted += f"=== TOOL CALLING TRACE LOGS (Hafta 3.1 & 3.2 2. Ödev) ===\n"
+    
+    if trace_logs:
+        for log in trace_logs:
+            logs_formatted += (
+                f"[Turn {log['turn']}]\n"
+                f"• Çağrılan Araç: {log['tool_name']}\n"
+                f"• Parametreler: {log['arguments']}\n"
+                f"• Yanıt/Sonuç: {log['response']}\n\n"
+            )
+    else:
+        logs_formatted += "Bu sorgu için harici bir araç çağrılmadı (Doğrudan Asistan Yanıtı).\n"
+
+    # Chat history güncelleme
+    new_history = history + [(user_message, final_answer)]
+    
+    return "", new_history, logs_formatted, get_database_records_text()
+
+def get_database_records_text():
+    """Veritabanındaki kayıtları formatlı bir metin olarak döner."""
+    res = get_all_inquiries()
+    records = res.get("records", [])
+    if not records:
+        return "Veritabanında henüz kayıtlı soru bulunmamaktadır."
+    
+    output = f"📊 Toplam Kayıt Sayısı: {res['total_count']}\n" + "="*50 + "\n"
+    for r in records:
+        output += f"ID #{r['id']} | Konu: {r['topic']} | Ekleyen: {r['user_name']} ({r['created_at']})\nSoru: {r['question']}\n" + "-"*50 + "\n"
+    return output
+
+# Gradio Arayüz Tasarımı (Custom Design System)
+custom_css = """
+.main-header { text-align: center; color: #1e3a8a; margin-bottom: 20px; }
+.trace-log-box textarea { font-family: monospace; font-size: 13px; background-color: #f8fafc; }
+"""
+
+with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı", css=custom_css, theme=gr.themes.Soft()) as demo:
+    gr.Markdown(
+        """
+        # 🕌 Namaz Vakti ve Fıkıh Asistanı (Magibu Yapay Zekâ Mimarisi)
+        *Public API Entegrasyonu (Aladhan API), SQLite Veritabanı Okuma/Yazma, Custom Jinja2 Chat Template ve Tool Calling Trace Logları*
+        """
+    )
+
+    with gr.Tabs():
+        # SEKME 1: Sohbet Arayüzü
+        with gr.TabItem("💬 Sohbet Arayüzü"):
+            chatbot = gr.Chatbot(label="Asistan Söyleşisi", height=450)
+            with gr.Row():
+                msg_input = gr.Textbox(
+                    placeholder="Örnek: 'İstanbul için namaz vakitleri nelerdir?' veya 'Bu soruyu kaydet: Sehiv secdesi ne zaman yapılır?'",
+                    label="Mesajınız",
+                    lines=2,
+                    scale=8
+                )
+                submit_btn = gr.Button("Gönder 🚀", variant="primary", scale=2)
+
+            gr.Examples(
+                examples=[
+                    ["İstanbul için namaz vakitleri nelerdir?"],
+                    ["Ankara imsak ve akşam ezanı kaçta okunuyor?"],
+                    ["Bu fıkhi soruyu kaydet: Sehiv secdesi hangi durumlarda vacip olur?"],
+                    ["Veritabanındaki kayıtlı geçmiş soruları listele."]
+                ],
+                inputs=msg_input
+            )
+
+        # SEKME 2: Tool Calling & Jinja2 Trace Logları (Ödev Teslim Kontrolü İçin)
+        with gr.TabItem("⚙️ Tool Call & Jinja2 Trace Logları"):
+            gr.Markdown("### 🔍 Arka Plan Adımları (Tool Calling & Jinja2 Template Output)")
+            trace_output = gr.Textbox(
+                label="Trace Logs ve Şablon Çıktısı",
+                interactive=False,
+                lines=18,
+                elem_classes=["trace-log-box"]
+            )
+
+        # SEKME 3: Veritabanı Görüntüleyici
+        with gr.TabItem("🗄️ SQLite Veritabanı Kayıtları"):
+            gr.Markdown("### 📋 Veritabanında (user_inquiries) Saklanan Soru ve Fetva Kayıtları")
+            db_output = gr.Textbox(
+                label="Veritabanı İçeriği",
+                value=get_database_records_text(),
+                interactive=False,
+                lines=15
+            )
+            refresh_db_btn = gr.Button("Veritabanını Yenile 🔄")
+
+    # Event Bağlantıları
+    submit_btn.click(
+        fn=process_query,
+        inputs=[msg_input, chatbot],
+        outputs=[msg_input, chatbot, trace_output, db_output]
+    )
+    
+    msg_input.submit(
+        fn=process_query,
+        inputs=[msg_input, chatbot],
+        outputs=[msg_input, chatbot, trace_output, db_output]
+    )
+
+    refresh_db_btn.click(
+        fn=get_database_records_text,
+        inputs=[],
+        outputs=[db_output]
+    )
 
 if __name__ == "__main__":
-    demo.launch(server_name="127.0.0.1", server_port=7860)
+    demo.launch(server_name="127.0.0.1", server_port=7860, share=False)
