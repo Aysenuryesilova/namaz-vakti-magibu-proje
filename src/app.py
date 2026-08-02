@@ -1,5 +1,5 @@
 """
-app.py - Gradio Web Arayüzü (Hugging Face Spaces & Yerel Kullanım İçin Uçtan Uca Arayüz)
+app.py - Gradio Web Arayüzü (Gradio 6.x Tam Uyumlu Kararlı Sürüm)
 """
 
 import gradio as gr
@@ -10,9 +10,11 @@ from database import get_all_inquiries
 agent = IslamicToolCallingAgent()
 
 def process_query(user_message, history):
-    """Kullanıcı mesajını alır, ajanı çalıştırır ve hem sohbet cevabını hem de trace loglarını üretir."""
+    """Kullanıcı mesajını alır, ajanı çalıştırır ve sohbet cevabı ile trace loglarını döner."""
     if not user_message or not user_message.strip():
-        return "", history, "Lütfen geçerli bir soru girin.", ""
+        return "", history or [], "Lütfen geçerli bir soru girin.", get_database_records_text()
+
+    history = history or []
 
     # Ajanı çalıştırıp yanıt, trace logları ve Jinja2 promptunu alıyoruz
     final_answer, trace_logs, jinja_prompt = agent.run(user_message)
@@ -30,12 +32,12 @@ def process_query(user_message, history):
                 f"• Yanıt/Sonuç: {log['response']}\n\n"
             )
     else:
-        logs_formatted += "Bu sorgu için harici bir araç çağrılmadı (Doğrudan Asistan Yanıtı).\n"
+        logs_formatted += "Bu sorgu için harici bir araç çağrılmadı (Bilgi Tabanı / Doğrudan Asistan Yanıtı).\n"
 
-    # Chat history güncelleme
-    new_history = history + [(user_message, final_answer)]
+    # Gradio 6 uyumlu tuple konuşma geçmişi ekleme
+    updated_history = history + [(user_message, final_answer)]
     
-    return "", new_history, logs_formatted, get_database_records_text()
+    return "", updated_history, logs_formatted, get_database_records_text()
 
 def get_database_records_text():
     """Veritabanındaki kayıtları formatlı bir metin olarak döner."""
@@ -49,13 +51,13 @@ def get_database_records_text():
         output += f"ID #{r['id']} | Konu: {r['topic']} | Ekleyen: {r['user_name']} ({r['created_at']})\nSoru: {r['question']}\n" + "-"*50 + "\n"
     return output
 
-# Gradio Arayüz Tasarımı (Custom Design System)
+# Gradio Arayüz Tasarımı
 custom_css = """
 .main-header { text-align: center; color: #1e3a8a; margin-bottom: 20px; }
 .trace-log-box textarea { font-family: monospace; font-size: 13px; background-color: #f8fafc; }
 """
 
-with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı", css=custom_css, theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı") as demo:
     gr.Markdown(
         """
         # 🕌 Namaz Vakti ve Fıkıh Asistanı (Magibu Yapay Zekâ Mimarisi)
@@ -69,7 +71,7 @@ with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı", css=custom_css, theme=gr
             chatbot = gr.Chatbot(label="Asistan Söyleşisi", height=450)
             with gr.Row():
                 msg_input = gr.Textbox(
-                    placeholder="Örnek: 'İstanbul için namaz vakitleri nelerdir?' veya 'Bu soruyu kaydet: Sehiv secdesi ne zaman yapılır?'",
+                    placeholder="Örnek: 'İstanbul için namaz vakitleri nelerdir?' veya 'Sehiv secdesi ne zaman yapılır?' veya 'Bu soruyu kaydet: Orucu ne bozar?'",
                     label="Mesajınız",
                     lines=2,
                     scale=8
@@ -79,7 +81,8 @@ with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı", css=custom_css, theme=gr
             gr.Examples(
                 examples=[
                     ["İstanbul için namaz vakitleri nelerdir?"],
-                    ["Ankara imsak ve akşam ezanı kaçta okunuyor?"],
+                    ["Sehiv secdesi ne zaman yapılır?"],
+                    ["Abdestin farzları nelerdir?"],
                     ["Bu fıkhi soruyu kaydet: Sehiv secdesi hangi durumlarda vacip olur?"],
                     ["Veritabanındaki kayıtlı geçmiş soruları listele."]
                 ],
@@ -127,4 +130,4 @@ with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı", css=custom_css, theme=gr
     )
 
 if __name__ == "__main__":
-    demo.launch(server_name="127.0.0.1", server_port=7860, share=False)
+    demo.launch(server_name="127.0.0.1", server_port=7860, share=False, css=custom_css, theme=gr.themes.Soft())
