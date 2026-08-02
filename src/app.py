@@ -1,75 +1,78 @@
 """
-app.py - Gradio Web Arayüzü (Hugging Face Spaces & Yerel Kullanım İçin Uçtan Uca Arayüz)
+app.py - Gradio Canlı Arayüzü ve Hugging Face Spaces Başlatıcı
+Bu modül; Gradio ile kullanıcı sohbet arayüzünü, Tool Call & Jinja2 Trace Loglarını 
+ve SQLite Veritabanı görüntüleyicisini canlıya alır.
 """
 
 import gradio as gr
 from agent import IslamicToolCallingAgent
 from database import get_all_inquiries
 
-# Ajan motorumuzu başlatıyoruz
+# Ajan Motorumuzu Başlatıyoruz
 agent = IslamicToolCallingAgent()
 
 def process_query(user_message, history):
-    """Kullanıcı mesajını alır, ajanı çalıştırır ve hem sohbet cevabını hem de trace loglarını üretir."""
-    if not user_message or not user_message.strip():
-        return "", history, "Lütfen geçerli bir soru girin.", ""
-
-    # Ajanı çalıştırıp yanıt, trace logları ve Jinja2 promptunu alıyoruz
-    final_answer, trace_logs, jinja_prompt = agent.run(user_message)
-
-    # Log formatlama
-    logs_formatted = f"=== JINJA2 ŞABLON ÇIKTISI (Hafta 3.2 1. Ödev) ===\n{jinja_prompt}\n\n"
-    logs_formatted += f"=== TOOL CALLING TRACE LOGS (Hafta 3.1 & 3.2 2. Ödev) ===\n"
+    """Kullanıcı mesajını işler ve Gradio bileşenlerini günceller."""
+    if not user_message or user_message.strip() == "":
+        return "", history, "Lütfen geçerli bir soru giriniz.", get_database_records_text()
+    
+    # Agent motorunu çalıştırıyoruz
+    final_answer, trace_logs, jinja_prompt_output = agent.run(user_message)
+    
+    # Trace log ve Jinja2 şablon çıktısını formatlama
+    logs_formatted = f"=== 📜 JINJA2 CHAT TEMPLATE INPUT/OUTPUT ===\n{jinja_prompt_output}\n\n"
+    logs_formatted += f"=== ⚙️ TOOL CALLING & INTENT TRACE LOGS ===\n"
     
     if trace_logs:
         for log in trace_logs:
             logs_formatted += (
-                f"[Turn {log['turn']}]\n"
+                f"[Turn {log['turn']}] {log['action']}\n"
                 f"• Çağrılan Araç: {log['tool_name']}\n"
                 f"• Parametreler: {log['arguments']}\n"
-                f"• Yanıt/Sonuç: {log['response']}\n\n"
+                f"• Dönen Yanıt: {log['response']}\n\n"
             )
     else:
-        logs_formatted += "Bu sorgu için harici bir araç çağrılmadı (Doğrudan Asistan Yanıtı).\n"
+        logs_formatted += "Harici bir araç çağrılmadı (Doğrudan Asistan Yanıtı).\n"
 
-    # Chat history güncelleme
+    # Chatbot geçmişini güncelleme
     new_history = history + [(user_message, final_answer)]
     
     return "", new_history, logs_formatted, get_database_records_text()
 
 def get_database_records_text():
-    """Veritabanındaki kayıtları formatlı bir metin olarak döner."""
+    """Veritabanındaki tüm kayıtları formatlı metin olarak döner."""
     res = get_all_inquiries()
     records = res.get("records", [])
     if not records:
         return "Veritabanında henüz kayıtlı soru bulunmamaktadır."
     
-    output = f"📊 Toplam Kayıt Sayısı: {res['total_count']}\n" + "="*50 + "\n"
+    output = f"📊 Toplam Veritabanı Kayıt Sayısı: {res['total_count']}\n" + "="*60 + "\n"
     for r in records:
-        output += f"ID #{r['id']} | Konu: {r['topic']} | Ekleyen: {r['user_name']} ({r['created_at']})\nSoru: {r['question']}\n" + "-"*50 + "\n"
+        output += f"ID #{r['id']} | Konu: {r['topic']} | Ekleyen: {r['user_name']} ({r['created_at']})\nSoru: {r['question']}\n" + "-"*60 + "\n"
     return output
 
-# Gradio Arayüz Tasarımı (Custom Design System)
+# Gradio Özel Tasarım Sistemi
 custom_css = """
 .main-header { text-align: center; color: #1e3a8a; margin-bottom: 20px; }
-.trace-log-box textarea { font-family: monospace; font-size: 13px; background-color: #f8fafc; }
+.trace-log-box textarea { font-family: monospace; font-size: 13px; background-color: #0f172a; color: #38bdf8; }
+.db-box textarea { font-family: monospace; font-size: 13px; background-color: #f8fafc; color: #0f172a; }
 """
 
-with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı", css=custom_css, theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="Namaz Vakti ve Fıkıh Asistanı", css=custom_css, theme=gr.themes.Soft()) as demo:
     gr.Markdown(
         """
         # 🕌 Namaz Vakti ve Fıkıh Asistanı (Magibu Yapay Zekâ Mimarisi)
-        *Public API Entegrasyonu (Aladhan API), SQLite Veritabanı Okuma/Yazma, Custom Jinja2 Chat Template ve Tool Calling Trace Logları*
+        *Public API Entegrasyonu (Aladhan API), SQLite Veritabanı Okuma/Yazma, Custom Jinja2 Chat Template ve Kesintisiz Soru Yanıt Motoru*
         """
     )
 
     with gr.Tabs():
-        # SEKME 1: Sohbet Arayüzü
+        # SEKME 1: Sohbet Arayüzü (Tüm Sorulara Yanıt Verir!)
         with gr.TabItem("💬 Sohbet Arayüzü"):
-            chatbot = gr.Chatbot(label="Asistan Söyleşisi", height=450)
+            chatbot = gr.Chatbot(label="Asistan Söyleşisi", height=480)
             with gr.Row():
                 msg_input = gr.Textbox(
-                    placeholder="Örnek: 'İstanbul için namaz vakitleri nelerdir?' veya 'Bu soruyu kaydet: Sehiv secdesi ne zaman yapılır?'",
+                    placeholder="Soru sorun (ör: 'Sehiv secdesi ne zaman yapılır?', 'İstanbul namaz vakitleri', 'Bu soruyu kaydet: Teheccüd kaç rekat kılınır?')",
                     label="Mesajınız",
                     lines=2,
                     scale=8
@@ -78,21 +81,22 @@ with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı", css=custom_css, theme=gr
 
             gr.Examples(
                 examples=[
-                    ["İstanbul için namaz vakitleri nelerdir?"],
-                    ["Ankara imsak ve akşam ezanı kaçta okunuyor?"],
-                    ["Bu fıkhi soruyu kaydet: Sehiv secdesi hangi durumlarda vacip olur?"],
-                    ["Veritabanındaki kayıtlı geçmiş soruları listele."]
+                    ["Sehiv secdesi ne zaman vacip olur ve nasıl yapılır?"],
+                    ["İstanbul için bugünkü namaz vakitleri nelerdir?"],
+                    ["Abdesti bozan durumlar nelerdir?"],
+                    ["Bu fıkhi soruyu kaydet: Kaza namazı niyeti nasıl yapılır?"],
+                    ["Veritabanındaki kayıtlı tüm soruları listele."]
                 ],
                 inputs=msg_input
             )
 
-        # SEKME 2: Tool Calling & Jinja2 Trace Logları (Ödev Teslim Kontrolü İçin)
+        # SEKME 2: Tool Calling & Jinja2 Trace Logları (Ödev Kontrol Alanı)
         with gr.TabItem("⚙️ Tool Call & Jinja2 Trace Logları"):
-            gr.Markdown("### 🔍 Arka Plan Adımları (Tool Calling & Jinja2 Template Output)")
+            gr.Markdown("### 🔍 Arka Plan Adımları (Tool Calling & Jinja2 Template Input/Output)")
             trace_output = gr.Textbox(
                 label="Trace Logs ve Şablon Çıktısı",
                 interactive=False,
-                lines=18,
+                lines=20,
                 elem_classes=["trace-log-box"]
             )
 
@@ -103,9 +107,10 @@ with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı", css=custom_css, theme=gr
                 label="Veritabanı İçeriği",
                 value=get_database_records_text(),
                 interactive=False,
-                lines=15
+                lines=16,
+                elem_classes=["db-box"]
             )
-            refresh_db_btn = gr.Button("Veritabanını Yenile 🔄")
+            refresh_db_btn = gr.Button("Veritabanını Yenile 🔄", variant="secondary")
 
     # Event Bağlantıları
     submit_btn.click(

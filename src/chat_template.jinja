@@ -1,14 +1,20 @@
 {# 
-  Custom Chat Template (Jinja2) - Dini İlimler & Tool Calling Asistanı
+  Custom Chat Template (Jinja2) - Dini İlimler, Namaz Vakti & Tool Calling Asistanı
   Bu şablon; modelin Sistem, Kullanıcı, Asistan ve Araç (Tool) mesajlarını 
   birbirinden doğru ayırt edebilmesi ve çıktıyı standart ChatML formatında sarmalaması için tasarlanmıştır.
 #}
+
+{%- if tools -%}
+<|im_start|>tools
+{{ tools | tojson(indent=2) }}
+<|im_end|>
+{%- endif -%}
 
 {%- if messages[0]['role'] == 'system' -%}
     {{- "<|im_start|>system\n" + messages[0]['content'] + "<|im_end|>\n" -}}
     {%- set loop_messages = messages[1:] -%}
 {%- else -%}
-    {{- "<|im_start|>system\nSen yetkin ve güvenilir bir Dini İlimler, Namaz Vakti ve Fıkıh Asistanısın. Verilen araçları kullanarak doğru yanıtlar üretirsin.<|im_end|>\n" -}}
+    {{- "<|im_start|>system\nSen yetkin ve güvenilir bir Dini İlimler, Namaz Vakti ve Fıkıh Asistanısın. Verilen araçları ve sahih kaynakları kullanarak halüsinasyonsuz yanıtlar üretirsin.<|im_end|>\n" -}}
     {%- set loop_messages = messages -%}
 {%- endif -%}
 

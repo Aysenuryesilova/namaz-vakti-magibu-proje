@@ -14,29 +14,44 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "islamic_assistant.db")
 def get_db_connection():
     """Veritabanına güvenli bir bağlantı açar."""
     conn = sqlite3.connect(DB_PATH)
-    # Veri satırlarını sözlük (dictionary) şeklinde alabilmek için satır fabrikası ayarlanır
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_database():
     """
-    Uygulama ilk açıldığında çalışır. Eğer yoksa veritabanı tablosunu oluşturur.
-    Bu sayede veri yazma (INSERT) ve okuma (SELECT) işlemlerini yapabileceğimiz bir alanımız olur.
+    Uygulama ilk açıldığında çalışır. Tablo şemasının doğru olduğundan emin olur.
     """
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Kullanıcı soru ve fetva talepleri için tablo oluşturuyoruz
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS user_inquiries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            topic TEXT NOT NULL,
-            question TEXT NOT NULL,
-            user_name TEXT DEFAULT 'Anonim',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    # Var olan tablo yapısını denetle, yoksa veya eski ise yeniden oluştur
+    cursor.execute("PRAGMA table_info(user_inquiries)")
+    columns = [row[1] for row in cursor.fetchall()]
+    
+    if not columns or "user_name" not in columns:
+        cursor.execute("DROP TABLE IF EXISTS user_inquiries")
+        cursor.execute("""
+            CREATE TABLE user_inquiries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                topic TEXT NOT NULL,
+                question TEXT NOT NULL,
+                user_name TEXT DEFAULT 'Anonim',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Örnek başlangıç verileri
+        sample_records = [
+            ("Namaz", "Sehiv secdesi hangi durumlarda vacip olur?", "Ayşe Nur", "2026-07-26 14:30:00"),
+            ("Oruç", "Unutarak bir şey yemek veya içmek orucu bozar mı?", "Mehmet", "2026-07-28 10:15:00"),
+            ("Abdest", "Abdest alırken sırayı karıştırmak abdesti geçersiz kılar mı?", "Fatma", "2026-08-01 09:00:00")
+        ]
+        cursor.executemany(
+            "INSERT INTO user_inquiries (topic, question, user_name, created_at) VALUES (?, ?, ?, ?)",
+            sample_records
         )
-    """)
-    conn.commit()
+        conn.commit()
+        
     conn.close()
 
 def save_inquiry(topic: str, question: str, user_name: str = "Anonim") -> dict:
@@ -45,6 +60,7 @@ def save_inquiry(topic: str, question: str, user_name: str = "Anonim") -> dict:
     Kullanıcının fıkhi sorusunu veya fetva kaydını SQLite veritabanına ekler.
     """
     try:
+        init_database()
         conn = get_db_connection()
         cursor = conn.cursor()
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -75,6 +91,7 @@ def get_all_inquiries() -> dict:
     Veritabanındaki tüm soru ve fetva kayıtlarını çekip liste halinde döndürür.
     """
     try:
+        init_database()
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT id, topic, question, user_name, created_at FROM user_inquiries ORDER BY id DESC")
@@ -93,6 +110,6 @@ def get_all_inquiries() -> dict:
 if __name__ == "__main__":
     init_database()
     print("Database test başlatılıyor...")
-    res = save_inquiry("Namaz", "Sehiv secdesi ne zaman yapılır?", "Ayşe Nur")
+    res = save_inquiry("Namaz", "Teheccüd namazı kaç rekat kılınır?", "Ayşe Nur")
     print("Kaydedildi:", res)
     print("Tüm Kayıtlar:", get_all_inquiries())

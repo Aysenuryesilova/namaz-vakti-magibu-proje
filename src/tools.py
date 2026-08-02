@@ -1,46 +1,50 @@
 """
-tools.py - Tool Calling Fonksiyonları ve JSON Şemaları
-Bu dosya, modelin dış dünya ile iletişim kurmasını sağlar. Aladhan API ve SQLite 
-veritabanı işlemlerini modelin çağırabileceği fonksiyonlar haline getirir.
+tools.py - Public API Entegrasyonları ve SQLite Veritabanı Araçları (Tool Call Definitions)
+Bu modül; modelin çağırabileceği dış dünya API'sini (Aladhan Namaz Vakitleri API) 
+ve veritabanı okuma/yazma araçlarını tanımlar.
 """
 
 import requests
+
 from database import save_inquiry, get_all_inquiries
 
 def get_prayer_times(city: str, country: str = "Turkey") -> dict:
     """
-    Tool 1: Belirtilen şehir için Aladhan API'den namaz vakitlerini çeker (Public API - Veri Okuma).
+    Tool 1: Diyanet metoduna göre belirtilen şehrin günlük namaz vakitlerini Aladhan Public API'sinden çeker.
     """
     try:
         url = f"https://api.aladhan.com/v1/timingsByCity?city={city}&country={country}&method=13"
-        response = requests.get(url, timeout=10)
-        data = response.json()
-        if response.status_code == 200 and data.get("code") == 200:
+        response = requests.get(url, timeout=8)
+        
+        if response.status_code == 200:
+            data = response.json()
             timings = data["data"]["timings"]
             date_info = data["data"]["date"]["readable"]
+            
             return {
                 "status": "success",
                 "city": city.title(),
                 "country": country.title(),
                 "date": date_info,
                 "prayer_times": {
-                    "İmsak": timings.get("Fajr"),
-                    "Güneş": timings.get("Sunrise"),
-                    "Öğle": timings.get("Dhuhr"),
-                    "İkindi": timings.get("Asr"),
-                    "Akşam": timings.get("Maghrib"),
-                    "Yatsı": timings.get("Isha")
+                    "İmsak": timings["Fajr"],
+                    "Güneş": timings["Sunrise"],
+                    "Öğle": timings["Dhuhr"],
+                    "İkindi": timings["Asr"],
+                    "Akşam": timings["Maghrib"],
+                    "Yatsı": timings["Isha"]
                 },
-                "source": "Aladhan API (Diyanet Metodu - Method 13)"
+                "source": "Aladhan Public API (Diyanet Metodu)"
             }
         else:
-            return {"status": "error", "message": f"{city} için vakit bilgisi alınamadı."}
+            return {"status": "error", "message": f"API yanıt vermedi (HTTP Code: {response.status_code})"}
+            
     except Exception as e:
-        return {"status": "error", "message": f"API Bağlantı Hatası: {str(e)}"}
+        return {"status": "error", "message": f"Bağlantı hatası: {str(e)}"}
 
 def save_inquiry_tool(topic: str, question: str, user_name: str = "Anonim") -> dict:
     """
-    Tool 2: Fıkhi soru veya fetva kaydını SQLite veritabanına ekler (Veritabanı - Veri Yazma).
+    Tool 2: Kullanıcının fıkhi sorusunu SQLite veritabanına kaydeder (Veritabanı - Veri Yazma).
     """
     return save_inquiry(topic=topic, question=question, user_name=user_name)
 
