@@ -162,9 +162,11 @@ Tarayıcınızda `http://127.0.0.1:7860` adresine giderek Gradio arayüzüne eri
 
 ## 🌐 6. Canlı Demo & Bağlantılar
 
-- **Hugging Face Space Live Demo**: [https://huggingface.co/spaces/Aysenur44/ezan-vakti-ai-assistant](https://huggingface.co/spaces/Aysenur44/ezan-vakti-ai-assistant)
-- **GitHub Kaynak Kodu**: [https://github.com/Aysenuryesilova/namaz-vakti-magibu-proje](https://github.com/Aysenuryesilova/namaz-vakti-magibu-proje)
-- **Hugging Face Profili**: [https://huggingface.co/Aysenur44](https://huggingface.co/Aysenur44)
+- **Hugging Face Space Live Demo**: [https://huggingface.co/spaces/Aysenur44/ezan-vakti-ai-assistant]
+- **GitHub Kaynak Kodu**: [https://github.com/Aysenuryesilova/namaz-vakti-magibu-proje]
+- **Hugging Face Profili**: [https://huggingface.co/Aysenur44]
+- ** Google Colab Canlı Demo**: [https://colab.research.google.com/github/Aysenuryesilova/namaz-vakti-magibu-proje/blob/main/src/colab_demo.ipynb]
+- 
 
 ---
 
