@@ -8,7 +8,7 @@ Bu proje, **1. Ödev: Custom Chat Template (Jinja2)** ve **2. Ödev: Tool-Callin
 
 > 📌 **Önemli Not:** Hugging Face Space üzerindeki ücretsiz CPU/donanım ve kota sınırlamaları nedeniyle uygulamanın kesintisiz test edilebilmesi amacıyla **Google Colab Canlı Demo** ortamı oluşturulmuştur.
 
-- 🟢 **Google Colab Canlı Demo (Önerilen Canlı Ortam):** [Colab Demo Notebook](https://colab.research.google.com/github/Aysenuryesilova/namaz-vakti-magibu-proje/blob/main/colab_demo.ipynb)
+- 🟢 **Google Colab Canlı Demo (Önerilen Canlı Ortam):** [Colab Demo Notebook](https://colab.research.google.com/github/Aysenuryesilova/namaz-vakti-magibu-proje/blob/main/src/colab_demo.ipynb)
 - 🟡 **Hugging Face Space:** [Aysenur44/ezan-vakti-ai-assistant](https://huggingface.co/spaces/Aysenur44/ezan-vakti-ai-assistant)
 - 🔗 **GitHub Kaynak Kod Deposu:** [Aysenuryesilova/namaz-vakti-magibu-proje](https://github.com/Aysenuryesilova/namaz-vakti-magibu-proje)
 
