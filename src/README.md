@@ -1,28 +1,37 @@
-# 📂 Namaz Vakti & Fıkıh Asistanı - Kaynak Kod Klasörü (`src/`)
+# 📂 Namaz Vakti & Fıkıh Asistanı - Proje ve Kaynak Kod Dokümantasyonu (`src/`)
 
-Bu klasör, **1. Ödev: Custom Chat Template (Jinja2)** ve **2. Ödev: Tool-Calling Destekli Asistan** projelerinin tüm modüler kaynak kodlarını, şablonlarını ve veritabanı sürücülerini içerir.
+Bu proje, **1. Ödev: Custom Chat Template (Jinja2)** ve **2. Ödev: Tool-Calling Destekli Asistan** çalışmalarının modüler kaynak kodlarını, şablonlarını, veritabanı sürücülerini ve canlı demo bağlantılarını içerir.
 
-`src/` klasörü, dış bağımlılıklardan izole edilerek modüler yazılım mimarisi ilkesine göre tasarlanmıştır.
+---
+
+## 🚀 Canlı Demo ve Çalıştırma Bağlantıları
+
+> 📌 **Önemli Not:** Hugging Face Space üzerindeki ücretsiz CPU/donanım ve kota sınırlamaları nedeniyle uygulamanın kesintisiz test edilebilmesi amacıyla **Google Colab Canlı Demo** ortamı oluşturulmuştur.
+
+- 🟢 **Google Colab Canlı Demo (Önerilen Canlı Ortam):** [Colab Demo Notebook](https://colab.research.google.com/github/Aysenuryesilova/namaz-vakti-magibu-proje/blob/main/colab_demo.ipynb)
+- 🟡 **Hugging Face Space:** [Aysenur44/ezan-vakti-ai-assistant](https://huggingface.co/spaces/Aysenur44/ezan-vakti-ai-assistant)
+- 🔗 **GitHub Kaynak Kod Deposu:** [Aysenuryesilova/namaz-vakti-magibu-proje](https://github.com/Aysenuryesilova/namaz-vakti-magibu-proje)
 
 ---
 
 ## 📑 Dosya Listesi ve Sorumluluk Haritası
 
-| Dosya Adı | Görevi / Sorumluluğu | İlgili Ödev |
-| :--- | :--- | :--- |
-| **`chat_template.jinja`** | Modelin sistem, kullanıcı, asistan ve araç mesajlarını ayırt etmesini sağlayan Hugging Face standartlı Jinja2 şablonu. | **1. Ödev** |
-| **`database.py`** | SQLite veritabanı (`islamic_assistant.db`) bağlantısını açar, tabloları oluşturur/günceller ve Veri Yazma (INSERT), Okuma (SELECT) ve Arama (LIKE) işlevlerini sağlar. | **2. Ödev (DB)** |
-| **`tools.py`** | Harici Aladhan Public REST API çağrısını (`get_prayer_times`) ve veritabanı fonksiyonlarını sarar. Model için OpenAI/HF uyumlu `TOOLS_SCHEMA` JSON tanımını barındırır. | **2. Ödev (Tools)** |
-| **`agent.py`** | Jinja2 promptunu oluşturan, kullanıcının niyetini analiz ederek doğru aracı çağıran ve adım adım **Trace Log** kaydı tutan Ajan Motorudur (`IslamicToolCallingAgent`). | **2. Ödev (Engine)** |
-| **`app.py`** | Gradio 5/6 uyumlu, 4 sekmeli web arayüzüdür. Sohbet ekranı, Trace Log izleyici, canlı veritabanı paneli ve istemci token ayarlarını sunar. | **2. Ödev (UI & Space)** |
-| **`requirements.txt`** | Projenin ihtiyaç duyduğu bağımlılık listesi (`gradio`, `requests`, `jinja2`). | **Ortak** |
-| **`islamic_assistant.db`** | Yerel SQLite veritabanı dosyası (`user_inquiries` tablosunu içerir). | **2. Ödev (DB Data)** |
+| Dosya Adı                  | Görevi / Sorumluluğu                                                                                                                                                    | İlgili Ödev           |
+| :------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------- |
+| **`chat_template.jinja`**  | Modelin sistem, kullanıcı, asistan ve araç mesajlarını ayırt etmesini sağlayan ChatML standartlı Jinja2 şablonu.                                                        | **1. Ödev**           |
+| **`test_template.py`**     | Jinja2 şablonunun bağımsız olarak ChatML çıktısı üretip üretmediğini doğrulayan test betiği.                                                                            | **1. Ödev**           |
+| **`database.py`**          | SQLite veritabanı (`islamic_assistant.db`) bağlantısını açar, tabloları oluşturur/günceller; Veri Yazma (INSERT), Okuma (SELECT) ve Arama (LIKE) işlevlerini sağlar.    | **2. Ödev (DB)**      |
+| **`tools.py`**             | Harici Aladhan Public REST API çağrısını (`get_prayer_times`) ve veritabanı fonksiyonlarını sarar. Model için OpenAI/HF uyumlu `TOOLS_SCHEMA` JSON tanımını barındırır. | **2. Ödev (Tools)**   |
+| **`agent.py`**             | Jinja2 promptunu oluşturan, kullanıcının niyetini analiz ederek doğru aracı çağıran ve adım adım **Trace Log** kaydı tutan Ajan Motorudur (`IslamicToolCallingAgent`).  | **2. Ödev (Engine)**  |
+| **`app.py`**               | Gradio uyumlu web arayüzüdür. Sohbet ekranı, Trace Log izleyici, canlı veritabanı paneli ve istemci ayarlarını sunar.                                                   | **2. Ödev (UI)**      |
+| **`requirements.txt`**     | Projenin ihtiyaç duyduğu bağımlılık listesi (`gradio`, `requests`, `jinja2`).                                                                                           | **Ortak**             |
+| **`islamic_assistant.db`** | Yerel SQLite veritabanı dosyası (`user_inquiries` tablosunu içerir).                                                                                                    | **2. Ödev (DB Data)** |
 
 ---
 
 ## 🧱 Modüler Veri Akışı ve Mimari
 
-```
+```text
                                   +-----------------------+
                                   |    app.py (Gradio)    |
                                   +-----------------------+
@@ -44,50 +53,70 @@ Bu klasör, **1. Ödev: Custom Chat Template (Jinja2)** ve **2. Ödev: Tool-Call
                            |  Aladhan Public API    |   |  database.py (SQLite)  |
                            | (Prayer Times Service) |   | (user_inquiries Table) |
                            +------------------------+   +------------------------+
+
 ```
 
----
+## ⚙️ Arka Plan Tool-Call & Trace Log Çıktısı (Örnek Çalıştırma)
 
-## 🔍 Detaylı Modül Açıklamaları
+Uygulamanın test_template.py veya agent.py üzerinden çalıştırılması esnasında arka planda üretilen ham Trace Log kaydı:
 
-### 1. `chat_template.jinja` (Ödev 1)
-- **Format**: ChatML (`<|im_start|>role\ncontent<|im_end|>\n`).
-- **Dinamik Şema**: Jinja2 render motoruna `tools` nesnesi verildiğinde, kullanılabilir tüm araçların JSON şemasını sistem mesajının içerisine otomatik olarak enjekte eder.
-- **Generation Prompt**: `add_generation_prompt=True` seçeneği aktif olduğunda, modelin cevaba başlamasını sağlayan `<|im_start|>assistant\n` etiketini üretir.
+=== ÖDEV 1: CUSTOM JINJA2 CHAT TEMPLATE ÇIKTISI ===
+<|im_start|>system
+Sen yetkin, güvenilir bir Dini İlimler, Namaz Vakti ve Fıkıh Asistanısın. Kullanılabilir araçları (tools) kullanarak halüsinasyon görmeden doğru yanıtlar üretirsin.
 
-### 2. `database.py` (Ödev 2 - Veritabanı Katmanı)
-- `init_database()`: Veritabanı yoksa oluşturur. Tabloda `user_name` gibi sütunlar eksikse otomatik migrasyon (ALTER TABLE) yapar.
-- `save_inquiry(topic, question, user_name)`: [WRITE] Yeni bir fıkhi soru kaydeder.
-- `get_all_inquiries()`: [READ ALL] Tüm kayıtları en yeniden en eskiye sıralayarak çeker.
-- `search_inquiries(keyword)`: [READ SEARCH] Konu veya soru metninde kelime bazlı arama yapar.
+Kullanılabilir Araçlar (Tools):
+[
+{
+"description": "Belirtilen şehir için namaz vakitlerini getirir.",
+"name": "get_namaz_vakti",
+"parameters": {
+"properties": {
+"sehir": {
+"description": "Şehir adı (Örn: İstanbul)",
+"type": "string"
+}
+},
+"required": [
+"sehir"
+],
+"type": "object"
+}
+}
+]
+Fonksiyon çağırmak istediğinde çıktını şu formatta üret: <tool_call>{"name": "fonksiyon_adi", "arguments": {...}}</tool_call><|im_end|>
+<|im_start|>user
+İstanbul için bugün akşam ezanı saat kaçta okunacak?<|im_end|>
+<|im_start|>assistant
+<tool_call>{"name": "get_namaz_vakti", "arguments": {"sehir": "İstanbul"}}</tool_call><|im_end|>
+<|im_start|>tool_response
+{"aksham": "20:15"}<|im_end|>
+<|im_start|>assistant
 
-### 3. `tools.py` (Ödev 2 - Araçlar ve JSON Şeması)
-- `get_prayer_times(city, country)`: Aladhan Public REST API'sine `https://api.aladhan.com/v1/timingsByCity` HTTP GET isteği gönderir (Method 13 - Diyanet İşleri Başkanlığı metodu).
-- `TOOLS_SCHEMA`: Modelin fonksiyon isimlerini, açıklamalarını ve beklediği argüman türlerini öğrenmesini sağlayan JSON listesi.
+=== ÖDEV 2: TOOL CALLING TRACE LOGS (ADIM ADIM ÇALIŞTIRMA İZİ) ===
+[Döngü Adımı / Turn 1]
+• Çağrılan Fonksiyon / Tool: get_prayer_times
+• Gönderilen Argümanlar: {'city': 'Istanbul', 'country': 'Turkey'}
+• Araçtan Dönen Gerçek Veri (Status): success
+• Yanıt İçeriği: {'status': 'success', 'city': 'Istanbul', 'country': 'Turkey', 'prayer_times': {'İmsak': '04:11', 'Güneş': '05:55', 'Öğle': '13:15', 'İkindi': '17:10', 'Akşam': '20:25', 'Yatsı': '22:01'}}
 
-### 4. `agent.py` (Ödev 2 - Ajan Motoru)
-- `IslamicToolCallingAgent.run(user_query)`:
-  1. Girdiyi alır ve `chat_template.jinja` ile ChatML promptuna dönüştürür.
-  2. Niyet analizi (Intent Recognition) ile doğru fonksiyonu seçer.
-  3. Araç fonksiyonunu çalıştırıp gerçek veriyi alır.
-  4. Yanıtı **sadece bu verilere** dayandırarak halüsinasyonu %100 engeller.
-  5. Adım adım çalıştırma izini (`trace_logs`) dizi olarak döndürür.
+## ⚡ Yerelde Çalıştırma Adımları
 
-### 5. `app.py` (Ödev 2 - Canlı Web Arayüzü)
-- Gradio `gr.Blocks` yapısı ve `type="messages"` formatı kullanılarak tasarlanmıştır.
-- Sekme 1: Sohbet Arayüzü (Örnek butonlar ile hızlı test).
-- Sekme 2: Tool Call & Jinja2 Trace Logları (Ödev tesliminde ekran görüntüsü alınacak alan).
-- Sekme 3: Canlı Veritabanı Görüntüleyici ve Kelime Arama Paneli.
-- Sekme 4: İstemci Token Ayarları (Hugging Face Spaces üzerinde sıfır maliyetle çalışmayı sağlayan esnek istemci seçeneği).
+Kaynak kodları kendi bilgisayarınızda bağımsız olarak çalıştırmak için:
 
----
+# 1. Proje dizinine geçin
 
-## ⚡ Yerel Test Talimatı
-
-Kaynak kodları bağımsız olarak çalıştırmak için `src/` klasörüne girip `app.py` dosyasını başlatabilirsiniz:
-
-```bash
 cd src
+
+# 2. Gerekli kütüphaneleri yükleyin
+
+pip install -r requirements.txt
+
+# 3. Jinja2 şablonunu test etmek için
+
+python test_template.py
+
+# 4. Gradio arayüzünü başlatmak için
+
 python app.py
-```
-Uygulama `http://127.0.0.1:7860` adresinde yerel sunucunuzda yayına girecektir.
+
+Uygulama [http://127.0.0.1:7860](http://127.0.0.1:7860) adresinde yerel sunucunuzda yayına girecektir.
