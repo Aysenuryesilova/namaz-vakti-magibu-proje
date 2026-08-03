@@ -5,35 +5,42 @@
 Bu dosya, asistanımızın dış dünya (yerel SQLite veritabanı) ile güvenli bir şekilde 
 iletişim kurmasını sağlar.
 
-Ödev Gereksinimi Karşılaması:
-1. Veri Yazma (Write): Kullanıcının ilettiği fıkhi soruları veritabanına kaydeder.
-2. Veri Okuma (Read): Veritabanındaki tüm kayıtları veya aranan konudaki soruları çeker.
-3. Halüsinasyon Önleme: Model, veritabanından gelen bu nesnel verileri doğrudan kullanır.
+Hugging Face Spaces Uyumlu Dayanıklılık:
+- HF Spaces ortamlarında varsayılan dizin yazma korumalı olabilir.
+- get_db_path() fonksiyonu önce yerel dizine yazmayı dener, korumalı ise geçici sistem 
+  dizinine (tempfile) geçerek HİÇBİR ZAMAN ÇÖKME YAŞANMAZ.
 ====================================================================================
 """
 
 import sqlite3
 import os
+import tempfile
 from datetime import datetime
 
-# Veritabanı dosyamızın tam yolu (src klasörü içerisinde saklanır)
-DB_PATH = os.path.join(os.path.dirname(__file__), "islamic_assistant.db")
+def get_db_path():
+    """Hugging Face Space ve yerel ortamda yazma izinlerini kontrol ederek güvenli DB yolu döner."""
+    local_path = os.path.join(os.path.dirname(__file__), "islamic_assistant.db")
+    try:
+        test_path = local_path + ".test"
+        with open(test_path, "w", encoding="utf-8") as f:
+            f.write("test")
+        if os.path.exists(test_path):
+            os.remove(test_path)
+        return local_path
+    except Exception:
+        # Yazma korumalı HF Space ortamlarında geçici klasöre geç
+        return os.path.join(tempfile.gettempdir(), "islamic_assistant.db")
+
+DB_PATH = get_db_path()
 
 def get_db_connection():
-    """
-    Veritabanına güvenli bir bağlantı nesnesi (connection) döndürür.
-    sqlite3.Row sayesinde veriler sadece tuple olarak değil, dict (sözlük) key-value 
-    erişimi ile kolayca kullanılabilir hale gelir.
-    """
+    """Veritabanına güvenli bağlantı ve sqlite3.Row sözlük fabrikasını başlatır."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_database():
-    """
-    Uygulama ilk başlatıldığında otomatik çalışır. 
-    Eğer 'user_inquiries' tablosu yoksa oluşturur veya eski şemayı günceller (Migration).
-    """
+    """Uygulama açıldığında çalışır, yoksa tabloyu oluşturur ve eksik sütunları günceller."""
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -47,7 +54,6 @@ def init_database():
         )
     """)
     
-    # Kolon kontrolü ve otomatik migration (Sütun eksikse ekle)
     cursor.execute("PRAGMA table_info(user_inquiries)")
     columns = [row['name'] for row in cursor.fetchall()]
     
@@ -58,12 +64,8 @@ def init_database():
     conn.close()
 
 def save_inquiry(topic: str, question: str, user_name: str = "Anonim") -> dict:
-    """
-    [TOOL CALL: VERİ YAZMA / WRITE]
-    Kullanıcının ilettiği soru veya fetva talebini SQLite veritabanına kaydeder.
-    """
+    """[TOOL CALL: VERİ YAZMA / WRITE] Soru/Fetva kaydını SQLite veritabanına ekler."""
     try:
-        init_database()
         conn = get_db_connection()
         cursor = conn.cursor()
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -91,12 +93,8 @@ def save_inquiry(topic: str, question: str, user_name: str = "Anonim") -> dict:
         return {"status": "error", "message": f"Veritabanına kaydederken hata oluştu: {str(e)}"}
 
 def get_all_inquiries() -> dict:
-    """
-    [TOOL CALL: VERİ OKUMA / READ ALL]
-    Veritabanındaki tüm soru ve fetva kayıtlarını en son eklenenden başlayarak listeler.
-    """
+    """[TOOL CALL: VERİ OKUMA / READ ALL] Tüm soru ve fetva kayıtlarını çeker."""
     try:
-        init_database()
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT id, topic, question, user_name, created_at FROM user_inquiries ORDER BY id DESC")
@@ -113,10 +111,7 @@ def get_all_inquiries() -> dict:
         return {"status": "error", "message": f"Kayıtlar çekilirken hata oluştu: {str(e)}", "records": []}
 
 def search_inquiries(keyword: str) -> dict:
-    """
-    [TOOL CALL: VERİ ARAMA / READ SEARCH]
-    Belirtilen anahtar kelimeye göre (konu veya soru içinde geçen) veritabanında arama yapar.
-    """
+    """[TOOL CALL: VERİ ARAMA / READ SEARCH] Kelimeye göre veritabanında arama yapar."""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -139,10 +134,7 @@ def search_inquiries(keyword: str) -> dict:
         return {"status": "error", "message": f"Arama yapılırken hata oluştu: {str(e)}", "records": []}
 
 def delete_inquiry(record_id: int) -> dict:
-    """
-    [TOOL CALL: VERİ SİLME / DELETE]
-    Veritabanından belirli bir ID'ye sahip kaydı siler.
-    """
+    """[TOOL CALL: VERİ SİLME / DELETE] Belirli bir kaydı siler."""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -160,8 +152,5 @@ def delete_inquiry(record_id: int) -> dict:
 
 if __name__ == "__main__":
     init_database()
+    print("Veritabanı yolu:", DB_PATH)
     print("Veritabanı başlatıldı.")
-    test_save = save_inquiry("Namaz", "Sehiv secdesi ne zaman yapılır?", "Ayşe Nur")
-    print("Test Kayıt Ekleme:", test_save)
-    print("Test Tüm Kayıtlar:", get_all_inquiries())
-    print("Test Arama ('sehiv'):", search_inquiries("sehiv"))

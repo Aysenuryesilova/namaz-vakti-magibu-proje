@@ -1,24 +1,25 @@
 """
 ====================================================================================
-ÖDEV 2: GRADIO WEB ARAYÜZÜ (APP.PY) - HUGGING FACE SPACES UYUMLU
+ÖDEV 2: GRADIO WEB ARAYÜZÜ (APP.PY) - HUGGING FACE SPACES KESİNTİSİZ UYUMLU
 ====================================================================================
 Bu dosya, projemizi Hugging Face Spaces üzerinde ve yerel ortamda canlı test 
 edilebilir bir web uygulamasına dönüştürür.
 
 Hugging Face Space Kısıtlamaları & Maliyetsiz İstemci (Client-Side) Çözümü:
-- Hugging Face Spaces ücretsiz CPU sunucularında GPU bulunmaz veya kotası sınırlıdır.
-- Projemiz Aladhan Public API ve yerel SQLite kullandığı için %100 ÜCRETSİZ ve SUNUCU 
-  MALİYETİ OLMAZSIZIN (Zero-Cost Client Architecture) çalışır.
-- Ayrıca arayüze kullanıcıların kendi Hugging Face API Token'larını (hf_...) girip 
-  canlı LLM inference testi yapabilecekleri istemci ayarları sekmesi eklenmiştir.
+1. Gradio 'server_name="0.0.0.0"' ile başlatılarak Hugging Face Space dış trafiğine açılır.
+2. Aladhan Public API ve yerel SQLite motoru kullanıldığı için %100 ÜCRETSİZ ve SUNUCU 
+   MALİYETİ OLMAKSIZIN (Zero-Cost Client Architecture) 7/24 kesintisiz çalışır.
+3. Ayrıca arayüze kullanıcıların kendi Hugging Face API Token'larını (hf_...) girip 
+   canlı LLM inference testi yapabilecekleri istemci ayarları sekmesi eklenmiştir.
 ====================================================================================
 """
 
+import os
 import gradio as gr
 from agent import IslamicToolCallingAgent
 from database import get_all_inquiries, search_inquiries
 
-# Ajan Motorumuzu Başlatıyoruz
+# Ajan motorumuzu başlatıyoruz
 agent = IslamicToolCallingAgent()
 
 def process_query(user_message, history, hf_token_input):
@@ -53,7 +54,7 @@ def process_query(user_message, history, hf_token_input):
                 f"• Yanıt İçeriği: {log['response']}\n\n"
             )
     else:
-        logs_formatted += "Harici bir araç çağrılmadı (Doğrudan Asistan Yanıtı).\n"
+        logs_formatted += "Bu sorgu için harici bir araç çağrılmadı (Doğrudan Asistan Yanıtı).\n"
 
     # Gradio 5/6 Uyumlu Messages Formatında Chatbot Geçmişini Güncelleme
     new_history = history + [
@@ -103,7 +104,7 @@ with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı") as demo:
     gr.Markdown(
         """
         # 🕌 Namaz Vakti ve Fıkıh Asistanı (Magibu Yapay Zekâ Mimarisi)
-        *Public API Entegrasyonu (Aladhan API), SQLite Veritabanı Okuma/Yazma, Custom Jinja2 Chat Template ve Kesintisiz Soru Yanıt Motoru*
+        *Public API Entegrasyonu (Aladhan API), SQLite Veritabanı Okuma/Yazma, Custom Jinja2 Chat Template ve Tool Calling Trace Logları*
         """
     )
 
@@ -211,5 +212,7 @@ with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı") as demo:
     )
 
 if __name__ == "__main__":
-    # Hugging Face Space ve Yerel Sunucu İçin Port Ayarı
-    demo.launch(server_name="127.0.0.1", server_port=7860, share=False)
+    # Hugging Face Space ortamında 0.0.0.0 adresiyle başlatarak dış dünyaya açıyoruz
+    server_name = os.environ.get("GRADIO_SERVER_NAME", "0.0.0.0")
+    server_port = int(os.environ.get("GRADIO_SERVER_PORT", "7860"))
+    demo.launch(server_name=server_name, server_port=server_port, share=False)
