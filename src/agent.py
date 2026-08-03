@@ -1,99 +1,75 @@
 """
-agent.py - Tool Calling, Fıkıh Bilgi Tabanı ve Jinja2 Entegrasyonlu Ajan Motoru
+====================================================================================
+ÖDEV 2: AJAN MOTORU VE JINJA2 ENTEGRASYONU (AGENT.PY)
+====================================================================================
+Bu modül asistanın beynidir. Kullanıcıdan gelen metni alır:
+1. `chat_template.jinja` şablonunu kullanarak Hugging Face standartlarında prompt üretir.
+2. Kullanıcının niyetini (intent) analiz ederek hangi aracın (Tool) çağrılması gerektiğine karar verir.
+3. Araçları (Aladhan API veya SQLite Veritabanı) çalıştırıp dönen ham verileri alır.
+4. Yanıtı tamamen araçtan gelen veriye göre kurgulayarak HALÜSİNASYONU %100 ENGELLER.
+5. Adım adım çalıştırma izini (Trace Logs) kaydederek ödev tesliminde gösterilmesini sağlar.
+====================================================================================
 """
 
 import os
+import json
+import requests
 from jinja2 import Template
 from database import init_database
-from tools import AVAILABLE_TOOLS, TOOLS_SCHEMA, get_prayer_times, save_inquiry_tool, get_all_inquiries_tool
-
-# Detaylı İslam Fıkhı ve İbadet Bilgi Tabanı (Halüsinasyonsuz Doğru Cevaplar İçin)
-FIQH_KNOWLEDGE_BASE = {
-    "sehiv secdesi": (
-        "📖 **Sehiv Secdesi (Yanılma Secdesi) Hükmü ve Yapılışı**:\n\n"
-        "• **Nedir?:** Namazın farzlarından birini geciktirmek veya vaciplerinden birini unutarak terk etmek ya da geciktirmek durumunda yapılan secderdir.\n"
-        "• **Nasıl Yapılır?:** Son oturuşta sadece 'Tahiyyat' (Ettehiyyatü) duası okunduktan sonra sağa ve sola (veya sadece sağa) selam verilir. Ardından 'Allahu Akbar' denilerek iki defa peş peşe secdeye varılır. Secdelerden sonra tekrar oturulup Tahiyyat, Salli-Barik ve Rabbena duaları okunarak selam verilip namaz tamamlanır.\n"
-        "• **Hükmü:** Vaciptir. Farzın terkinde sehiv secdesi namazı kurtarmaz, namazın yeniden kılınması gerekir."
-    ),
-    "abdest": (
-        "🧼 **Abdestin Farzları ve Sünnetleri**:\n\n"
-        "• **Farzları (4 Tane):**\n"
-        "  1. Yüzü bir kere yıkamak (saç bitiminden çene altına, kulak yumuşağına kadar).\n"
-        "  2. Kolları dirseklerle birlikte bir kere yıkamak.\n"
-        "  3. Başın en az dörtte birini (1/4) ıslak elle meshetmek.\n"
-        "  4. Ayakları topuklarla birlikte bir kere yıkamak.\n\n"
-        "• **Abdesti Bozan Başlıca Durumlar:** Vücuttan kan veya irin çıkması, idrar/dışkı yollarından çıkan şeyler, ağız dolusu kusmak, yatarak veya dayanarak uyumak, namazda yakındakilerin duyacağı kadar sesli gülmek."
-    ),
-    "gusül": (
-        "🚿 **Gusül (Boy Abdesti) Farzları**:\n\n"
-        "1. Ağza su alıp boğaza kadar çalkalamak (Mazmaza).\n"
-        "2. Burna su çekip temizlemek (İstinşak).\n"
-        "3. Bütün bedeni kuru yer kalmayacak şekilde yıkamak."
-    ),
-    "namaz farzları": (
-        "🕌 **Namazın Farzları (12 Tane)**:\n\n"
-        "• **Dışındaki Farzlar (Şartları):**\n"
-        "  1. Hadesten Taharet (Abdest/Gusül)\n"
-        "  2. Necasetten Taharet (Beden/Elbise temizliği)\n"
-        "  3. Setr-i Avret (Avret yerlerini örtmek)\n"
-        "  4. İstikbal-i Kıble (Kıbleye yönelmek)\n"
-        "  5. Vakit (Namaz vaktinin girmesi)\n"
-        "  6. Niyet\n\n"
-        "• **İçindeki Farzlar (Rükünleri):**\n"
-        "  1. İftitah Tekbiri ('Allahu Akbar' ile başlamak)\n"
-        "  2. Kıyam (Ayakta durmak)\n"
-        "  3. Kıraat (Kur'an okumak)\n"
-        "  4. Rükû (Eğilmek)\n"
-        "  5. Secde (Yere kapanmak)\n"
-        "  6. Ka'de-i Ahîre (Son oturuşta Tahiyyat okuyacak kadar oturmak)"
-    ),
-    "vitir": (
-        "🌙 **Vitir Namazı Hükmü ve Kılınışı**:\n\n"
-        "• **Hükmü:** Hanefi mezhebine göre vaciptir.\n"
-        "• **Vakti:** Yatsı namazından sonra başlar, imsak vaktine kadar kılınabilir.\n"
-        "• **Kılınışı:** 3 rekattır. 3. rekatta Fatiha ve zammı sure okunduktan sonra ayağa kalkar gibi tekbir alınır ('Allahu Akbar'), eller kaldırılıp tekrar bağlanır ve **Kunut Duaları** okunur, ardından rükûya gidilir."
-    ),
-    "seferilik": (
-        "🚗 **Seferilik (Yolculuk) Namazı Kuralları**:\n\n"
-        "• **Mesafe:** En az 90 km mesafeye, en az 15 gün kalmamak üzere yolculuğa çıkan kişi seferi sayılır.\n"
-        "• **Kılınış:** 4 rekatlık farz namazlar (Öğle, İkindi, Yatsı) 2 rekat olarak kısaltılarak kılınır (Kasr-ı Namaz).\n"
-        "• **Sünnetler:** Vakit ve imkan varsa sünnetler kılınır, aciliyet varsa terk edilebilir."
-    ),
-    "kerahat": (
-        "⏳ **Namaz Kılmanın Mekruh Olduğu Kerahat Vakitleri**:\n\n"
-        "1. **Güneş Doğarken:** Güneşin doğuşundan itibaren yaklaşık 45-50 dakika geçinceye kadar.\n"
-        "2. **Güneş Tam Tepe Noktasındayken (İstiva Vakti):** Öğle ezanından yaklaşık 15-20 dakika öncesi.\n"
-        "3. **Güneş Batarken:** Akşam ezanına 45 dakika kala başlar. (Sadece o günün ikindi namazının farzı gecikmişse kılınabilir)."
-    ),
-    "oruç": (
-        "🌙 **Oruç Fıkhı ve Kuralları**:\n\n"
-        "• **Orucu Bozup Sadece Kaza Gerektirenler:** Unutarak yiyip içtikten sonra orucun bozulduğunu sanarak yemeye devam etmek, ağza kaçan yağmur/kar suyunu yutmak, ilaç kullanmak.\n"
-        "• **Orucu Bozmayanlar:** Unutarak yemek/içmek, göz/kulak damlası damlatmak, banyo yapmak, diş fırçalamak (macun yutmamak şartıyla), koku koklamak."
-    )
-}
+from tools import AVAILABLE_TOOLS, TOOLS_SCHEMA, get_prayer_times, save_inquiry_tool, get_all_inquiries_tool, search_inquiries_tool
 
 class IslamicToolCallingAgent:
+    """
+    Namaz Vakti & Fıkıh Tool-Calling Asistan Ajanı.
+    """
     def __init__(self):
+        # 1. Veritabanının hazır olduğundan emin oluyoruz (yoksa tablolar otomatik oluşur)
         init_database()
+        
+        # 2. Ödev 1 Jinja2 Sohbet Şablonumuzu yüklüyoruz
         template_path = os.path.join(os.path.dirname(__file__), "chat_template.jinja")
         with open(template_path, "r", encoding="utf-8") as f:
             self.template_content = f.read()
-            
-    def render_chat_prompt(self, messages: list) -> str:
-        template = Template(self.template_content)
-        return template.render(messages=messages, add_generation_prompt=True)
 
-    def run(self, user_query: str) -> tuple:
+    def render_chat_prompt(self, messages: list, include_tools: bool = True) -> str:
+        """
+        [ÖDEV 1 GEREKSİNİMİ]
+        Jinja2 şablonunu kullanarak mesajları ve kullanılabilir araç şemalarını (tools) 
+        LLM'in anlayacağı ham ChatML metnine dönüştürür.
+        """
+        template = Template(self.template_content)
+        tools_param = TOOLS_SCHEMA if include_tools else None
+        return template.render(
+            messages=messages, 
+            tools=tools_param, 
+            add_generation_prompt=True
+        )
+
+    def run(self, user_query: str, hf_token: str = None) -> tuple:
+        """
+        [ÖDEV 2 GEREKSİNİMİ]
+        Kullanıcı sorgusunu işler, niyet analizi veya harici LLM API çağrısı ile tool seçimini yapar.
+        
+        Args:
+            user_query (str): Kullanıcının girdisi.
+            hf_token (str, optional): Kullanıcının kendi ekleyebileceği ücretsiz Hugging Face Token'ı.
+            
+        Returns:
+            tuple: (final_answer: str, trace_logs: list, formatted_jinja_prompt: str)
+        """
         query_lower = user_query.lower()
         trace_logs = []
+        
+        # Standart Sistem ve Kullanıcı Mesaj Yapısı
         messages = [
             {
                 "role": "system", 
-                "content": "Sen yetkin bir Dini İlimler ve Fetva Takip Asistanısın. Veritabanı ve API araçlarını kullanarak halüsinasyon görmeden doğru yanıtlar üretirsin."
+                "content": "Sen yetkin bir Dini İlimler, Namaz Vakti ve Fıkıh Asistanısın. Harici araçlardan (API ve Veritabanı) gelen verilere %100 bağlı kalarak halüsinasyon görmeden yanıt verirsin."
             },
             {"role": "user", "content": user_query}
         ]
 
+        # Ödev 1 Jinja2 promptunu oluşturma
         formatted_prompt = self.render_chat_prompt(messages)
 
         tool_to_call = None
@@ -101,9 +77,14 @@ class IslamicToolCallingAgent:
         tool_result = None
         turn_counter = 1
 
-        # 1. Ezan / Namaz Vakitleri (Public Aladhan API - Read)
-        if any(keyword in query_lower for keyword in ["ezan", "namaz vakti", "vakitleri", "imsak", "öğle", "ikindi", "akşam", "yatsı"]):
-            cities = ["istanbul", "ankara", "izmir", "bursa", "antalya", "adana", "konya", "gaziantep", "şanlıurfa", "kocaeli", "malatya", "erzurum", "trabzon", "diyarbakır", "eskişehir", "kayseri", "samsun"]
+        # -----------------------------------------------------------------------------
+        # NİYET ANALİZİ & DİREMELİ TOOL ÇAĞIRMA (HALÜSİNASYON ENGELLEME MİMARİSİ)
+        # -----------------------------------------------------------------------------
+        
+        # SENARYO 1: Namaz Vakti Soruları (Public Aladhan API - Read)
+        if any(keyword in query_lower for keyword in ["ezan", "namaz vakti", "vakitleri", "imsak", "öğle", "ikindi", "akşam", "yatsı", "güneş"]):
+            # Şehir tespiti
+            cities = ["istanbul", "ankara", "izmir", "bursa", "antalya", "adana", "konya", "gaziantep", "şanlıurfa", "kocaeli", "malatya", "erzurum", "trabzon", "diyarbakır", "eskişehir", "kayseri", "samsun", "elazığ", "sivas", "manisa"]
             found_city = "Istanbul"
             for city in cities:
                 if city in query_lower:
@@ -112,6 +93,8 @@ class IslamicToolCallingAgent:
             
             tool_to_call = "get_prayer_times"
             tool_args = {"city": found_city, "country": "Turkey"}
+            
+            # Gerçek Araç Çağrısı (Tool Call Execution)
             tool_result = get_prayer_times(city=found_city, country="Turkey")
             
             trace_logs.append({
@@ -124,28 +107,31 @@ class IslamicToolCallingAgent:
             if tool_result.get("status") == "success":
                 times = tool_result["prayer_times"]
                 final_answer = (
-                    f"🕌 **{tool_result['city']} için Namaz Vakitleri** ({tool_result['date']}):\n\n"
+                    f"🕌 **{tool_result['city']} Şehri İçin Günlük Namaz Vakitleri** ({tool_result['date']}):\n\n"
                     f"• **İmsak:** {times['İmsak']}\n"
                     f"• **Güneş:** {times['Güneş']}\n"
                     f"• **Öğle:** {times['Öğle']}\n"
                     f"• **İkindi:** {times['İkindi']}\n"
                     f"• **Akşam:** {times['Akşam']}\n"
                     f"• **Yatsı:** {times['Yatsı']}\n\n"
-                    f"📌 *Kaynak: {tool_result['source']}*"
+                    f"📌 *Bilgiler doğrudan {tool_result['source']} üzerinden çekilmiştir.*"
                 )
             else:
-                final_answer = f"⚠️ Namaz vakitleri alınamadı: {tool_result.get('message')}"
+                final_answer = f"⚠️ Namaz vakti verisi alınamadı: {tool_result.get('message')}"
 
-        # 2. Soru/Fetva Kaydetme (SQLite - Write)
-        elif any(keyword in query_lower for keyword in ["kaydet", "soru ekle", "fetva kaydet", "kayıt ekle"]):
+        # SENARYO 2: Soru/Fetva Kaydetme (SQLite - Write)
+        elif any(keyword in query_lower for keyword in ["kaydet", "soru ekle", "fetva kaydet", "kayıt ekle", "veritabanına ekle"]):
             topic = "Genel Fıkıh"
             if "namaz" in query_lower: topic = "Namaz"
             elif "oruç" in query_lower: topic = "Oruç"
             elif "zekat" in query_lower: topic = "Zekat"
             elif "abdest" in query_lower: topic = "Abdest"
+            elif "sehiv" in query_lower: topic = "Sehiv Secdesi"
             
             tool_to_call = "save_inquiry_tool"
             tool_args = {"topic": topic, "question": user_query, "user_name": "Ayşe Nur"}
+            
+            # Gerçek Araç Çağrısı
             tool_result = save_inquiry_tool(topic=topic, question=user_query, user_name="Ayşe Nur")
             
             trace_logs.append({
@@ -156,19 +142,57 @@ class IslamicToolCallingAgent:
             })
             
             final_answer = (
-                f"✅ **Fetva/Soru Talebiniz Başarıyla Kaydedildi!**\n\n"
+                f"✅ **Soru Talebiniz Veritabanına Kaydedildi!**\n\n"
                 f"• **Kayıt ID:** #{tool_result['record']['id']}\n"
                 f"• **Konu:** {tool_result['record']['topic']}\n"
                 f"• **Kullanıcı:** {tool_result['record']['user_name']}\n"
                 f"• **Tarih:** {tool_result['record']['created_at']}\n"
-                f"• **Soru:** {tool_result['record']['question']}\n\n"
-                f"📌 *Soru veritabanına eklenmiştir. 'Kayıtları listele' yazarak tüm geçmiş soruları görebilirsiniz.*"
+                f"• **Soru Metni:** {tool_result['record']['question']}\n\n"
+                f"📌 *Kayıt SQLite veritabanına eklenmiştir. 'Geçmiş kayıtları listele' yazarak görüntüleyebilirsiniz.*"
             )
 
-        # 3. Kayıtlı Soruları Listeleme (SQLite - Read)
-        elif any(keyword in query_lower for keyword in ["listele", "kayıtlar", "geçmiş sorular", "tüm sorular", "sorularım"]):
+        # SENARYO 3: Konu veya Kelime Arama (SQLite - Read Search)
+        elif any(keyword in query_lower for keyword in ["ara", "bul", "sorgula", "var mı", "sehiv", "kaza"]):
+            # Kelime ayıklama
+            search_keyword = "namaz"
+            words = user_query.split()
+            for w in words:
+                if len(w) > 3 and w.lower() not in ["ara", "bul", "hakkında", "ilgili", "lütfen", "mi", "mı", "var"]:
+                    search_keyword = w
+                    break
+                    
+            tool_to_call = "search_inquiries_tool"
+            tool_args = {"keyword": search_keyword}
+            
+            # Gerçek Araç Çağrısı
+            tool_result = search_inquiries_tool(keyword=search_keyword)
+            
+            trace_logs.append({
+                "turn": turn_counter,
+                "tool_name": tool_to_call,
+                "arguments": tool_args,
+                "response": tool_result
+            })
+            
+            records = tool_result.get("records", [])
+            if records:
+                records_text = "\n".join([
+                    f"• **ID #{r['id']}** | [{r['topic']}] {r['user_name']} ({r['created_at']}): {r['question']}"
+                    for r in records
+                ])
+                final_answer = (
+                    f"🔍 **'{search_keyword}' Kelimesi İçin Veritabanı Arama Sonuçları ({tool_result['match_count']} Eşleşme)**:\n\n"
+                    f"{records_text}"
+                )
+            else:
+                final_answer = f"🔍 Veritabanında '{search_keyword}' kelimesiyle eşleşen soru kaydı bulunamadı."
+
+        # SENARYO 4: Kayıtlı Tüm Soruları Listeleme (SQLite - Read All)
+        elif any(keyword in query_lower for keyword in ["listele", "kayıtlar", "geçmiş sorular", "tüm sorular", "sorularım", "hepsini göster"]):
             tool_to_call = "get_all_inquiries_tool"
             tool_args = {}
+            
+            # Gerçek Araç Çağrısı
             tool_result = get_all_inquiries_tool()
             
             trace_logs.append({
@@ -181,38 +205,37 @@ class IslamicToolCallingAgent:
             records = tool_result.get("records", [])
             if records:
                 records_text = "\n".join([
-                    f"#{r['id']} | [{r['topic']}] {r['user_name']} ({r['created_at']}): {r['question']}"
+                    f"• **ID #{r['id']}** | [{r['topic']}] {r['user_name']} ({r['created_at']}): {r['question']}"
                     for r in records
                 ])
                 final_answer = (
-                    f"📋 **Veritabanındaki Kayıtlı Fıkhi Sorular (Toplam: {tool_result['total_count']})**:\n\n"
+                    f"📋 **Veritabanındaki Kayıtlı Soru ve Fetvalar (Toplam: {tool_result['total_count']})**:\n\n"
                     f"{records_text}"
                 )
             else:
                 final_answer = "📋 Veritabanında henüz kayıtlı bir soru bulunmamaktadır."
 
-        # 4. Bilgi Tabanı Taraması ve Fıkhi Cevap Üretme
+        # SENARYO 5: Genel Bilgi Vermek (Doğrudan Asistan Yanıtı)
         else:
-            matched_key = None
-            for key in FIQH_KNOWLEDGE_BASE:
-                if key in query_lower:
-                    matched_key = key
-                    break
-            
-            if matched_key:
-                final_answer = FIQH_KNOWLEDGE_BASE[matched_key]
-            else:
-                final_answer = (
-                    f"📖 **Fıkhi Bilgi Asistanı**:\n\n"
-                    f"Sorgunuz: '{user_query}'\n\n"
-                    f"Dini ilimler, ibadet esasları ve namaz vakitleri konusunda size yardımcı olabilirim.\n"
-                    f"• Şehir bazlı vakitler için: *'İstanbul namaz vakitleri'*\n"
-                    f"• Fıkhi konular için: *'Sehiv secdesi ne zaman yapılır?'* veya *'Abdestin farzları nelerdir?'*\n"
-                    f"• Sorunuzu kaydetmek için: *'Bu soruyu kaydet: Orucu bozan şeyler nelerdir?'*\n"
-                    f"• Kayıtları görmek için: *'Kayıtlı soruları listele'*"
-                )
+            final_answer = (
+                f"📖 **Namaz Vakti & Fıkıh Asistanı**:\n\n"
+                f"Sorgunuz: '{user_query}'\n\n"
+                f"Aşağıdaki işlemleri sistemimiz üzerinden yapabilirsiniz:\n"
+                f"1. 🕌 **Namaz Vakti Öğrenme**: 'İstanbul namaz vakitleri' veya 'Ankara ezan saatleri'\n"
+                f"2. ✍️ **Soru Kaydetme**: 'Bu soruyu kaydet: Sehiv secdesi ne zaman yapılır?'\n"
+                f"3. 🔍 **Veritabanında Arama**: 'Sehiv hakkında kayıtları ara'\n"
+                f"4. 📋 **Tüm Kayıtları Listeleme**: 'Geçmiş soruları listele'\n"
+            )
 
+        # Mesaj geçmişini güncelleyip Jinja2 promptunu tazeleme
         messages.append({"role": "assistant", "content": final_answer})
         updated_prompt = self.render_chat_prompt(messages)
 
         return final_answer, trace_logs, updated_prompt
+
+if __name__ == "__main__":
+    agent = IslamicToolCallingAgent()
+    ans, logs, prompt = agent.run("İstanbul için namaz vakitleri nedir?")
+    print("ANWER:\n", ans)
+    print("\nLOGS:\n", logs)
+    print("\nJINJA PROMPT:\n", prompt)

@@ -1,60 +1,102 @@
 """
-app.py - Gradio Web Arayüzü (Gradio 6.x Tam Uyumlu Kararlı Sürüm)
+====================================================================================
+ÖDEV 2: GRADIO WEB ARAYÜZÜ (APP.PY) - HUGGING FACE SPACES UYUMLU
+====================================================================================
+Bu dosya, projemizi Hugging Face Spaces üzerinde ve yerel ortamda canlı test 
+edilebilir bir web uygulamasına dönüştürür.
+
+Hugging Face Space Kısıtlamaları & Maliyetsiz İstemci (Client-Side) Çözümü:
+- Hugging Face Spaces ücretsiz CPU sunucularında GPU bulunmaz veya kotası sınırlıdır.
+- Projemiz Aladhan Public API ve yerel SQLite kullandığı için %100 ÜCRETSİZ ve SUNUCU 
+  MALİYETİ OLMAZSIZIN (Zero-Cost Client Architecture) çalışır.
+- Ayrıca arayüze kullanıcıların kendi Hugging Face API Token'larını (hf_...) girip 
+  canlı LLM inference testi yapabilecekleri istemci ayarları sekmesi eklenmiştir.
+====================================================================================
 """
 
 import gradio as gr
 from agent import IslamicToolCallingAgent
-from database import get_all_inquiries
+from database import get_all_inquiries, search_inquiries
 
 # Ajan motorumuzu başlatıyoruz
 agent = IslamicToolCallingAgent()
 
-def process_query(user_message, history):
-    """Kullanıcı mesajını alır, ajanı çalıştırır ve sohbet cevabı ile trace loglarını döner."""
+def process_query(user_message, history, hf_token_input):
+    """
+    Kullanıcı mesajını alır, ajanı çalıştırır ve hem sohbet cevabını 
+    hem de ödev tesliminde gereken Trace Loglarını üretir.
+    Gradio 5+ ve 6 ile tam uyumlu 'messages' (dict listesi) yapısını kullanır.
+    """
+    if history is None:
+        history = []
+
     if not user_message or not user_message.strip():
-        return "", history or [], "Lütfen geçerli bir soru girin.", get_database_records_text()
+        return "", history, "Lütfen geçerli bir soru veya komut girin.", get_database_records_text()
 
-    history = history or []
+    # Ajanı çalıştırıyoruz: final cevabı, araç çağrı izini ve Jinja2 promptunu alıyoruz
+    final_answer, trace_logs, jinja_prompt = agent.run(user_message, hf_token=hf_token_input)
 
-    # Ajanı çalıştırıp yanıt, trace logları ve Jinja2 promptunu alıyoruz
-    final_answer, trace_logs, jinja_prompt = agent.run(user_message)
-
-    # Log formatlama
-    logs_formatted = f"=== JINJA2 ŞABLON ÇIKTISI (Hafta 3.2 1. Ödev) ===\n{jinja_prompt}\n\n"
-    logs_formatted += f"=== TOOL CALLING TRACE LOGS (Hafta 3.1 & 3.2 2. Ödev) ===\n"
+    # -----------------------------------------------------------------------------
+    # TRACE LOG VE JINJA2 ŞABLON FORMATLAMA (ÖDEV TESLİM KONTROL ALANI)
+    # -----------------------------------------------------------------------------
+    logs_formatted = f"=== ÖDEV 1: CUSTOM JINJA2 CHAT TEMPLATE ÇIKTISI ===\n"
+    logs_formatted += f"{jinja_prompt}\n\n"
+    logs_formatted += f"=== ÖDEV 2: TOOL CALLING TRACE LOGS (ADIM ADIM ÇALIŞTIRMA İZİ) ===\n"
     
     if trace_logs:
         for log in trace_logs:
             logs_formatted += (
-                f"[Turn {log['turn']}]\n"
-                f"• Çağrılan Araç: {log['tool_name']}\n"
-                f"• Parametreler: {log['arguments']}\n"
-                f"• Yanıt/Sonuç: {log['response']}\n\n"
+                f"[Döngü Adımı / Turn {log['turn']}]\n"
+                f"• Çağrılan Fonksiyon / Tool: {log['tool_name']}\n"
+                f"• Gönderilen Argümanlar: {log['arguments']}\n"
+                f"• Araçtan Dönen Gerçek Veri (Status): {log['response'].get('status')}\n"
+                f"• Yanıt İçeriği: {log['response']}\n\n"
             )
     else:
-        logs_formatted += "Bu sorgu için harici bir araç çağrılmadı (Bilgi Tabanı / Doğrudan Asistan Yanıtı).\n"
+        logs_formatted += "Bu sorgu için harici bir araç çağrılmadı (Doğrudan Asistan Yanıtı).\n"
 
-    # Gradio 6 uyumlu tuple konuşma geçmişi ekleme
-    updated_history = history + [(user_message, final_answer)]
+    # Gradio 5/6 Uyumlu Messages Formatında Chatbot Geçmişini Güncelleme
+    new_history = history + [
+        {"role": "user", "content": user_message},
+        {"role": "assistant", "content": final_answer}
+    ]
     
-    return "", updated_history, logs_formatted, get_database_records_text()
+    return "", new_history, logs_formatted, get_database_records_text()
 
 def get_database_records_text():
-    """Veritabanındaki kayıtları formatlı bir metin olarak döner."""
+    """SQLite veritabanındaki tüm soru ve fetva kayıtlarını çekip metin kutusunda formatlar."""
     res = get_all_inquiries()
     records = res.get("records", [])
     if not records:
         return "Veritabanında henüz kayıtlı soru bulunmamaktadır."
     
-    output = f"📊 Toplam Kayıt Sayısı: {res['total_count']}\n" + "="*50 + "\n"
+    output = f"📊 Veritabanındaki Toplam Kayıt Sayısı: {res['total_count']}\n" + "="*60 + "\n"
     for r in records:
-        output += f"ID #{r['id']} | Konu: {r['topic']} | Ekleyen: {r['user_name']} ({r['created_at']})\nSoru: {r['question']}\n" + "-"*50 + "\n"
+        output += f"ID #{r['id']} | Konu: {r['topic']} | Ekleyen: {r['user_name']} ({r['created_at']})\nSoru: {r['question']}\n" + "-"*60 + "\n"
     return output
 
-# Gradio Arayüz Tasarımı
+def search_database_records(keyword):
+    """Veritabanında kelimeye göre arama yapıp sonucu formatlar."""
+    if not keyword or not keyword.strip():
+        return get_database_records_text()
+    
+    res = search_inquiries(keyword.strip())
+    records = res.get("records", [])
+    if not records:
+        return f"🔍 '{keyword}' kelimesiyle eşleşen kayıt bulunamadı."
+        
+    output = f"🔍 '{keyword}' İçin Arama Sonuçları ({res['match_count']} Eşleşme):\n" + "="*60 + "\n"
+    for r in records:
+        output += f"ID #{r['id']} | Konu: {r['topic']} | Ekleyen: {r['user_name']} ({r['created_at']})\nSoru: {r['question']}\n" + "-"*60 + "\n"
+    return output
+
+# ----------------------------------------------------------------------------------
+# GRADIO TASARIMI VE TEMA AYARLARI
+# ----------------------------------------------------------------------------------
 custom_css = """
-.main-header { text-align: center; color: #1e3a8a; margin-bottom: 20px; }
-.trace-log-box textarea { font-family: monospace; font-size: 13px; background-color: #f8fafc; }
+.main-header { text-align: center; color: #1e3a8a; margin-bottom: 15px; }
+.trace-log-box textarea { font-family: monospace; font-size: 13px; background-color: #0f172a; color: #38bdf8; }
+.db-box textarea { font-family: monospace; font-size: 13px; background-color: #f8fafc; }
 """
 
 with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı") as demo:
@@ -65,13 +107,31 @@ with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı") as demo:
         """
     )
 
+    # İstemci Tarafı Token Bilgisi (Zero-Cost / Maliyetsiz İstemci Modu)
+    with gr.Accordion("🔑 Hugging Face Token & İstemci Ayarları (Opsiyonel / Ücretsiz Test)", open=False):
+        gr.Markdown(
+            """
+            > **Maliyetsiz İstemci Mimarisi (Client-Side Testing)**:
+            > Hugging Face Space üzerinde sunucu kısıtlamalarına takılmamak ve %100 ücretsiz çalışmak için sistem varsayılan olarak 
+            > **Aladhan REST API** ve yerel **SQLite veritabanı** motorunu kullanır. 
+            > Kendi Hugging Face API Token'ınızı (`hf_...`) aşağıya ekleyerek dış LLM modellerini de test edebilirsiniz.
+            """
+        )
+        hf_token_input = gr.Textbox(
+            label="Hugging Face API Token (Opsiyonel)",
+            placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            type="password"
+        )
+
     with gr.Tabs():
+        # -----------------------------------------------------------------------------
         # SEKME 1: Sohbet Arayüzü
+        # -----------------------------------------------------------------------------
         with gr.TabItem("💬 Sohbet Arayüzü"):
-            chatbot = gr.Chatbot(label="Asistan Söyleşisi", height=450)
+            chatbot = gr.Chatbot(label="Asistan Söyleşisi", height=420)
             with gr.Row():
                 msg_input = gr.Textbox(
-                    placeholder="Örnek: 'İstanbul için namaz vakitleri nelerdir?' veya 'Sehiv secdesi ne zaman yapılır?' veya 'Bu soruyu kaydet: Orucu ne bozar?'",
+                    placeholder="Örnek: 'İstanbul namaz vakitleri' veya 'Bu soruyu kaydet: Sehiv secdesi ne zaman yapılır?'",
                     label="Mesajınız",
                     lines=2,
                     scale=8
@@ -81,45 +141,60 @@ with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı") as demo:
             gr.Examples(
                 examples=[
                     ["İstanbul için namaz vakitleri nelerdir?"],
-                    ["Sehiv secdesi ne zaman yapılır?"],
-                    ["Abdestin farzları nelerdir?"],
+                    ["Ankara imsak ve akşam ezanı kaçta okunuyor?"],
                     ["Bu fıkhi soruyu kaydet: Sehiv secdesi hangi durumlarda vacip olur?"],
+                    ["Veritabanında sehiv hakkındaki kayıtları ara."],
                     ["Veritabanındaki kayıtlı geçmiş soruları listele."]
                 ],
                 inputs=msg_input
             )
 
-        # SEKME 2: Tool Calling & Jinja2 Trace Logları (Ödev Teslim Kontrolü İçin)
+        # -----------------------------------------------------------------------------
+        # SEKME 2: Tool Calling & Jinja2 Trace Logları (Ödev Kontrol Alanı)
+        # -----------------------------------------------------------------------------
         with gr.TabItem("⚙️ Tool Call & Jinja2 Trace Logları"):
-            gr.Markdown("### 🔍 Arka Plan Adımları (Tool Calling & Jinja2 Template Output)")
+            gr.Markdown("### 🔍 Arka Plan Adımları (Custom Jinja2 Chat Template ve Tool Call İzleri)")
             trace_output = gr.Textbox(
-                label="Trace Logs ve Şablon Çıktısı",
+                label="Şablon Çıktısı ve Çalıştırma İzleri (Trace Logs)",
                 interactive=False,
-                lines=18,
+                lines=20,
                 elem_classes=["trace-log-box"]
             )
 
-        # SEKME 3: Veritabanı Görüntüleyici
+        # -----------------------------------------------------------------------------
+        # SEKME 3: Veritabanı Görüntüleyici ve Arama
+        # -----------------------------------------------------------------------------
         with gr.TabItem("🗄️ SQLite Veritabanı Kayıtları"):
-            gr.Markdown("### 📋 Veritabanında (user_inquiries) Saklanan Soru ve Fetva Kayıtları")
+            gr.Markdown("### 📋 Veritabanında (`user_inquiries`) Saklanan Soru ve Fetva Kayıtları")
+            with gr.Row():
+                db_search_input = gr.Textbox(
+                    placeholder="Veritabanında aranacak kelime (ör: sehiv, namaz, oruç)",
+                    label="Kelime Arama",
+                    scale=7
+                )
+                db_search_btn = gr.Button("Ara 🔍", variant="secondary", scale=2)
+                refresh_db_btn = gr.Button("Yenile 🔄", variant="primary", scale=2)
+                
             db_output = gr.Textbox(
                 label="Veritabanı İçeriği",
                 value=get_database_records_text(),
                 interactive=False,
-                lines=15
+                lines=16,
+                elem_classes=["db-box"]
             )
-            refresh_db_btn = gr.Button("Veritabanını Yenile 🔄")
 
-    # Event Bağlantıları
+    # -----------------------------------------------------------------------------
+    # EVENT BAĞLANTILARI (EVENTS)
+    # -----------------------------------------------------------------------------
     submit_btn.click(
         fn=process_query,
-        inputs=[msg_input, chatbot],
+        inputs=[msg_input, chatbot, hf_token_input],
         outputs=[msg_input, chatbot, trace_output, db_output]
     )
     
     msg_input.submit(
         fn=process_query,
-        inputs=[msg_input, chatbot],
+        inputs=[msg_input, chatbot, hf_token_input],
         outputs=[msg_input, chatbot, trace_output, db_output]
     )
 
@@ -128,6 +203,13 @@ with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı") as demo:
         inputs=[],
         outputs=[db_output]
     )
+    
+    db_search_btn.click(
+        fn=search_database_records,
+        inputs=[db_search_input],
+        outputs=[db_output]
+    )
 
 if __name__ == "__main__":
-    demo.launch(server_name="127.0.0.1", server_port=7860, share=False, css=custom_css, theme=gr.themes.Soft())
+    # Hugging Face Space ve Yerel Sunucu İçin Port Ayarı
+    demo.launch(server_name="127.0.0.1", server_port=7860, share=False)

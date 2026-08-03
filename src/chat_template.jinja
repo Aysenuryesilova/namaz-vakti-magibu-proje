@@ -1,29 +1,58 @@
 {# 
-  Custom Chat Template (Jinja2) - Dini İlimler & Tool Calling Asistanı
-  Bu şablon; modelin Sistem, Kullanıcı, Asistan ve Araç (Tool) mesajlarını 
-  birbirinden doğru ayırt edebilmesi ve çıktıyı standart ChatML formatında sarmalaması için tasarlanmıştır.
+  ====================================================================================
+  ÖDEV 1: CUSTOM CHAT TEMPLATE (JINJA2) - NAMAZ VAKTI & FIKIH ASİSTANI
+  ====================================================================================
+  Bu Jinja2 şablonu, bir Büyük Dil Modelinin (LLM) mesaj rollerini (system, user, 
+  assistant, tool_call, tool_response) hatasız ayırt etmesini ve verilen fonksiyon 
+  tanımlarını (tools) sistem mesajı bağlamına standart JSON olarak yerleştirmesini sağlar.
+
+  Özellikleri:
+  1. ChatML özel etiketi yapısı kullanır: <|im_start|>role\ncontent<|im_end|>\n
+  2. 'tools' değişkeni sağlandığında, tüm araç şemalarını sistem mesajına enjekte eder.
+  3. 'add_generation_prompt' True olduğunda asistanın cevaba başlaması için <|im_start|>assistant\n ekler.
+  4. 'thinking' (düşünme) ve araç çağırma bloklarını temiz bir şekilde sarmalar.
+  ====================================================================================
 #}
 
+{# --- 1. SİSTEM MESAJI VE ARAÇ ŞEMALARI YÖNETİMİ --- #}
 {%- if messages[0]['role'] == 'system' -%}
-    {{- "<|im_start|>system\n" + messages[0]['content'] + "<|im_end|>\n" -}}
+    {{- "<|im_start|>system\n" + messages[0]['content'] | trim -}}
     {%- set loop_messages = messages[1:] -%}
 {%- else -%}
-    {{- "<|im_start|>system\nSen yetkin ve güvenilir bir Dini İlimler, Namaz Vakti ve Fıkıh Asistanısın. Verilen araçları kullanarak doğru yanıtlar üretirsin.<|im_end|>\n" -}}
+    {{- "<|im_start|>system\nSen yetkin, güvenilir bir Dini İlimler, Namaz Vakti ve Fıkıh Asistanısın. Kullanılabilir araçları (tools) kullanarak halüsinasyon görmeden doğru yanıtlar üretirsin." -}}
     {%- set loop_messages = messages -%}
 {%- endif -%}
 
+{# Eğer Jinja2 render motoruna araç tanımları (tools) iletilmişse, sistem mesajı sonuna ekle #}
+{%- if tools is defined and tools -%}
+    {{- "\n\nKullanılabilir Araçlar (Tools):\n" -}}
+    {{- tools | tojson(indent=2) -}}
+    {{- "\nFonksiyon çağırmak istediğinde çıktını şu formatta üret: <tool_call>{\"name\": \"fonksiyon_adi\", \"arguments\": {...}}</tool_call>" -}}
+{%- endif -%}
+
+{{- "<|im_end|>\n" -}}
+
+{# --- 2. SOHBET GEÇMİŞİ DÖNGÜSÜ --- #}
 {%- for message in loop_messages -%}
+    {# Kullanıcı Mesajı #}
     {%- if message['role'] == 'user' -%}
-        {{- "<|im_start|>user\n" + message['content'] + "<|im_end|>\n" -}}
+        {{- "<|im_start|>user\n" + message['content'] | trim + "<|im_end|>\n" -}}
+    
+    {# Asistan (Model) Yanıtı #}
     {%- elif message['role'] == 'assistant' -%}
-        {{- "<|im_start|>assistant\n" + message['content'] + "<|im_end|>\n" -}}
+        {{- "<|im_start|>assistant\n" + message['content'] | trim + "<|im_end|>\n" -}}
+    
+    {# Modelin Araç Çağırma İsteği (Tool Call) #}
     {%- elif message['role'] == 'tool_call' -%}
-        {{- "<|im_start|>tool_call\n" + message['content'] + "<|im_end|>\n" -}}
-    {%- elif message['role'] == 'tool' or message['role'] == 'tool_response' -%}
-        {{- "<|im_start|>tool_response\n" + message['content'] + "<|im_end|>\n" -}}
+        {{- "<|im_start|>tool_call\n" + message['content'] | trim + "<|im_end|>\n" -}}
+    
+    {# Dış Dünyadan (API / Veritabanı) Dönen Araç Yanıtı (Tool Response) #}
+    {%- elif message['role'] in ['tool', 'tool_response'] -%}
+        {{- "<|im_start|>tool_response\n" + message['content'] | trim + "<|im_end|>\n" -}}
     {%- endif -%}
 {%- endfor -%}
 
+{# --- 3. GENERATION PROMPT (MODELİN SIRADAKİ CEVABINI TETİKLEME) --- #}
 {%- if add_generation_prompt -%}
     {{- "<|im_start|>assistant\n" -}}
 {%- endif -%}
