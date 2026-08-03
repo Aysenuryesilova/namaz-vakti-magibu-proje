@@ -3,17 +3,25 @@
 ÖDEV 2: ARAÇ DÜZEYİ (TOOLS.PY) VE JSON ŞEMASI TANIMLARI
 ====================================================================================
 Bu modül, modelin dış dünya ile iletişim kurabildiği köprüdür.
-Burada hem gerçek API bağlantıları (Aladhan Public API) hem de SQLite veritabanı 
-işlemleri (Veri Yazma, Okuma, Arama) Python fonksiyonları olarak sarılır (wrap edilir).
-
-Ayrıca modelin bu fonksiyonların adlarını, ne işe yaradıklarını ve hangi parametreleri 
-aldıklarını anlayabilmesi için OpenAI / Hugging Face uyumlu `TOOLS_SCHEMA` JSON şeması 
-tanımlanmıştır.
+Tüm 81 ilimiz ve dünya şehirleri için Aladhan Public API entegrasyonu ve SQLite 
+veritabanı işlemlerini barındırır.
 ====================================================================================
 """
 
 import requests
 from database import save_inquiry, get_all_inquiries, search_inquiries, delete_inquiry
+
+def normalize_city_name(city: str) -> str:
+    """Türkçe karakterleri ASCII Karakterlerine dönüştürür (Aladhan API uyumluluğu için)."""
+    char_map = {
+        'ç': 'c', 'Ç': 'C',
+        'ğ': 'g', 'Ğ': 'G',
+        'ı': 'i', 'I': 'I', 'İ': 'I',
+        'ö': 'o', 'Ö': 'O',
+        'ş': 's', 'Ş': 'S',
+        'ü': 'u', 'Ü': 'U'
+    }
+    return "".join(char_map.get(c, c) for c in city)
 
 # ----------------------------------------------------------------------------------
 # 1. HARİCİ PUBLIC API ARACI: ALADHAN NAMAZ VAKİTLERİ (READ)
@@ -24,14 +32,21 @@ def get_prayer_times(city: str, country: str = "Turkey") -> dict:
     göre anlık namaz vakitlerini çeker.
     
     Args:
-        city (str): Şehir adı (ör: Istanbul, Ankara, Malatya)
+        city (str): Şehir adı (ör: Bitlis, Istanbul, Ankara, Malatya, Van, Hakkari, Izmir)
         country (str): Ülke adı (varsayılan: Turkey)
     """
     try:
-        url = f"https://api.aladhan.com/v1/timingsByCity?city={city}&country={country}&method=13"
+        clean_city = normalize_city_name(city.strip())
+        url = f"https://api.aladhan.com/v1/timingsByCity?city={clean_city}&country={country}&method=13"
         response = requests.get(url, timeout=10)
         data = response.json()
         
+        # Eğer orijinal adla gelmediyse ham adı da deneyelim
+        if response.status_code != 200 or data.get("code") != 200:
+            url = f"https://api.aladhan.com/v1/timingsByCity?city={city.strip()}&country={country}&method=13"
+            response = requests.get(url, timeout=10)
+            data = response.json()
+
         if response.status_code == 200 and data.get("code") == 200:
             timings = data["data"]["timings"]
             date_info = data["data"]["date"]["readable"]
@@ -42,12 +57,12 @@ def get_prayer_times(city: str, country: str = "Turkey") -> dict:
                 "country": country.title(),
                 "date": date_info,
                 "prayer_times": {
-                    "İmsak": timings["Fajr"],
-                    "Güneş": timings["Sunrise"],
-                    "Öğle": timings["Dhuhr"],
-                    "İkindi": timings["Asr"],
-                    "Akşam": timings["Maghrib"],
-                    "Yatsı": timings["Isha"]
+                    "İmsak": timings.get("Fajr"),
+                    "Güneş": timings.get("Sunrise"),
+                    "Öğle": timings.get("Dhuhr"),
+                    "İkindi": timings.get("Asr"),
+                    "Akşam": timings.get("Maghrib"),
+                    "Yatsı": timings.get("Isha")
                 },
                 "source": "Aladhan Public API (Diyanet Metodu - Method 13)"
             }
@@ -60,27 +75,17 @@ def get_prayer_times(city: str, country: str = "Turkey") -> dict:
 # 2. VERİTABANI ARAÇLARI (WRITE, READ ALL, READ SEARCH)
 # ----------------------------------------------------------------------------------
 def save_inquiry_tool(topic: str, question: str, user_name: str = "Anonim") -> dict:
-    """
-    Tool 2: Fıkhi soru veya fetva danışma kaydını veritabanına ekler (WRITE).
-    """
+    """Tool 2: Fıkhi soru veya fetva danışma kaydını veritabanına ekler (WRITE)."""
     return save_inquiry(topic=topic, question=question, user_name=user_name)
 
 def get_all_inquiries_tool() -> dict:
-    """
-    Tool 3: Veritabanında saklanan tüm geçmiş soru ve fetva kayıtlarını listeler (READ ALL).
-    """
+    """Tool 3: Veritabanında saklanan tüm geçmiş soru ve fetva kayıtlarını listeler (READ ALL)."""
     return get_all_inquiries()
 
 def search_inquiries_tool(keyword: str) -> dict:
-    """
-    Tool 4: Veritabanında belirtilen kelimeye göre arama yapar (READ SEARCH).
-    """
+    """Tool 4: Veritabanında belirtilen kelimeye göre arama yapar (READ SEARCH)."""
     return search_inquiries(keyword=keyword)
 
-# ----------------------------------------------------------------------------------
-# ARAÇ HARİTASI (AVAILABLE_TOOLS DICTIONARY)
-# ----------------------------------------------------------------------------------
-# Model bir fonksiyon adını döndürdüğünde Python'da o fonksiyonu ismiyle bulup tetiklememizi sağlar.
 AVAILABLE_TOOLS = {
     "get_prayer_times": get_prayer_times,
     "save_inquiry_tool": save_inquiry_tool,
@@ -88,22 +93,18 @@ AVAILABLE_TOOLS = {
     "search_inquiries_tool": search_inquiries_tool
 }
 
-# ----------------------------------------------------------------------------------
-# MODEL İÇİN JSON ŞEMASI (TOOLS SCHEMA)
-# ----------------------------------------------------------------------------------
-# Modelin fonksiyon isimlerini, amaçlarını ve beklediği argüman türlerini öğrenmesini sağlar.
 TOOLS_SCHEMA = [
     {
         "type": "function",
         "function": {
             "name": "get_prayer_times",
-            "description": "Belirtilen şehir için Diyanet İşleri metoduna göre günlük imsak, güneş, öğle, ikindi, akşam ve yatsı namaz vakitlerini çeker.",
+            "description": "Belirtilen şehir (Tüm 81 il ve dünya şehirleri) için Diyanet İşleri metoduna göre günlük imsak, güneş, öğle, ikindi, akşam ve yatsı namaz vakitlerini çeker.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "city": {
                         "type": "string",
-                        "description": "Namaz vakti öğrenilmek istenen şehir adı (ör: Istanbul, Ankara, Izmir, Malatya, Bursa)"
+                        "description": "Namaz vakti öğrenilmek istenen şehir adı (ör: Bitlis, Istanbul, Ankara, Izmir, Malatya, Van, Hakkari)"
                     },
                     "country": {
                         "type": "string",
@@ -172,5 +173,4 @@ TOOLS_SCHEMA = [
 ]
 
 if __name__ == "__main__":
-    print("Test API Call (Istanbul):", get_prayer_times("Istanbul"))
-    print("Test Search Tool ('namaz'):", search_inquiries_tool("namaz"))
+    print("Test Bitlis Prayer Times:", get_prayer_times("Bitlis"))

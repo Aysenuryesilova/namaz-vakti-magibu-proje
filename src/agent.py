@@ -4,7 +4,7 @@
 ====================================================================================
 Bu modül asistanın beynidir. Kullanıcıdan gelen metni alır:
 1. `chat_template.jinja` şablonunu kullanarak Hugging Face standartlarında prompt üretir.
-2. Kullanıcının niyetini (intent) analiz ederek hangi aracın (Tool) çağrılması gerektiğine karar verir.
+2. Tüm 81 ilimiz ve dünya şehirleri için niyet analizi ve dinamik şehir tespiti yapar.
 3. Araçları (Aladhan API veya SQLite Veritabanı) çalıştırıp dönen ham verileri alır.
 4. Yanıtı tamamen araçtan gelen veriye göre kurgulayarak HALÜSİNASYONU %100 ENGELLER.
 5. Adım adım çalıştırma izini (Trace Logs) kaydederek ödev tesliminde gösterilmesini sağlar.
@@ -12,31 +12,61 @@ Bu modül asistanın beynidir. Kullanıcıdan gelen metni alır:
 """
 
 import os
+import re
 import json
 import requests
 from jinja2 import Template
 from database import init_database
 from tools import AVAILABLE_TOOLS, TOOLS_SCHEMA, get_prayer_times, save_inquiry_tool, get_all_inquiries_tool, search_inquiries_tool
 
+# Türkiye'nin tüm 81 İli ve Önemli Dünya Şehirleri Listesi
+TURKEY_PROVINCES = [
+    "adana", "adıyamam", "adıyaman", "afyonkarahisar", "afyon", "ağrı", "agri", "aksaray", "amasya", 
+    "ankara", "antalya", "ardahan", "artvin", "aydın", "aydin", "balıkesir", "balikesir", "bartın", 
+    "bartin", "batman", "bayburt", "bilecik", "bingöl", "bingol", "bitlis", "bolu", "burdur", "bursa", 
+    "çanakkale", "canakkale", "çankırı", "cankiri", "çorum", "corum", "denizli", "diyarbakır", 
+    "diyarbakir", "düzce", "duzce", "edirne", "elazığ", "elazig", "erzincan", "erzurum", "eskişehir", 
+    "eskisehir", "gaziantep", "giresun", "gümüşhane", "gumushane", "hakkari", "hatay", "ığdır", "igdir", 
+    "isparta", "istanbul", "izmir", "kahramanmaraş", "kahramanmaras", "maraş", "karabük", "karabuk", 
+    "karaman", "kars", "kastamonu", "kayseri", "kırıkkale", "kirikkale", "kırklareli", "kirklareli", 
+    "kırşehir", "kirsehir", "kilis", "kocaeli", "konya", "kütahya", "kutahya", "malatya", "manisa", 
+    "mardin", "mersin", "içel", "muğla", "mugla", "muş", "mus", "nevşehir", "nevsehir", "niğde", "nigde", 
+    "ordu", "osmaniye", "rize", "sakarya", "samsun", "siirt", "sinop", "sivas", "şanlıurfa", "sanliurfa", 
+    "urfa", "şırnak", "sirnak", "tekirdağ", "tekirdag", "tokat", "trabzon", "tunceli", "uşak", "usak", 
+    "van", "yalova", "yozgat", "zonguldak", "mekke", "medine", "kudüs", "kudus", "londra", "berlin", "paris"
+]
+
+def extract_city_from_query(query: str) -> str:
+    """Kullanıcı sorgusundan şehir adını dinamik olarak tespit eder."""
+    query_clean = query.lower()
+    
+    # 1. Ön tanımlı 81 il ve şehir listesinden eşleşme kontrolü
+    for city in TURKEY_PROVINCES:
+        # Kelime sınırı ile tam kelime araması (ör: "van" kelimesi "tavan" içinde eşleşmesin)
+        pattern = r'\b' + re.escape(city) + r'\b'
+        if re.search(pattern, query_clean):
+            return city.title()
+
+    # 2. Şehir adı bulunamazsa 'için', 'ezanı', 'vakti' kelimelerinden önceki kelimeyi çekme
+    words = query_clean.split()
+    for i, w in enumerate(words):
+        if w in ["imsak", "ezan", "ezanı", "namaz", "vakti", "saati", "saatleri", "için"] and i > 0:
+            candidate = words[i-1].strip("?.,!")
+            if candidate not in ["bugün", "yarın", "akşam", "öğle", "ikindi", "yatsı", "güneş", "kaçta", "ne", "zaman", "bana", "için"]:
+                return candidate.title()
+                
+    return "Istanbul" # Varsayılan şehir
+
 class IslamicToolCallingAgent:
-    """
-    Namaz Vakti & Fıkıh Tool-Calling Asistan Ajanı.
-    """
+    """Namaz Vakti & Fıkıh Tool-Calling Asistan Ajanı."""
     def __init__(self):
-        # 1. Veritabanının hazır olduğundan emin oluyoruz (yoksa tablolar otomatik oluşur)
         init_database()
-        
-        # 2. Ödev 1 Jinja2 Sohbet Şablonumuzu yüklüyoruz
         template_path = os.path.join(os.path.dirname(__file__), "chat_template.jinja")
         with open(template_path, "r", encoding="utf-8") as f:
             self.template_content = f.read()
 
     def render_chat_prompt(self, messages: list, include_tools: bool = True) -> str:
-        """
-        [ÖDEV 1 GEREKSİNİMİ]
-        Jinja2 şablonunu kullanarak mesajları ve kullanılabilir araç şemalarını (tools) 
-        LLM'in anlayacağı ham ChatML metnine dönüştürür.
-        """
+        """Jinja2 şablonunu kullanarak mesajları ChatML formatında derler."""
         template = Template(self.template_content)
         tools_param = TOOLS_SCHEMA if include_tools else None
         return template.render(
@@ -47,20 +77,11 @@ class IslamicToolCallingAgent:
 
     def run(self, user_query: str, hf_token: str = None) -> tuple:
         """
-        [ÖDEV 2 GEREKSİNİMİ]
         Kullanıcı sorgusunu işler, niyet analizi veya harici LLM API çağrısı ile tool seçimini yapar.
-        
-        Args:
-            user_query (str): Kullanıcının girdisi.
-            hf_token (str, optional): Kullanıcının kendi ekleyebileceği ücretsiz Hugging Face Token'ı.
-            
-        Returns:
-            tuple: (final_answer: str, trace_logs: list, formatted_jinja_prompt: str)
         """
         query_lower = user_query.lower()
         trace_logs = []
         
-        # Standart Sistem ve Kullanıcı Mesaj Yapısı
         messages = [
             {
                 "role": "system", 
@@ -69,7 +90,6 @@ class IslamicToolCallingAgent:
             {"role": "user", "content": user_query}
         ]
 
-        # Ödev 1 Jinja2 promptunu oluşturma
         formatted_prompt = self.render_chat_prompt(messages)
 
         tool_to_call = None
@@ -78,18 +98,12 @@ class IslamicToolCallingAgent:
         turn_counter = 1
 
         # -----------------------------------------------------------------------------
-        # NİYET ANALİZİ & DİREMELİ TOOL ÇAĞIRMA (HALÜSİNASYON ENGELLEME MİMARİSİ)
+        # NİYET ANALİZİ & DİREMELİ TOOL ÇAĞIRMA (81 İL + VERİTABANI OYUN ALANI)
         # -----------------------------------------------------------------------------
         
-        # SENARYO 1: Namaz Vakti Soruları (Public Aladhan API - Read)
-        if any(keyword in query_lower for keyword in ["ezan", "namaz vakti", "vakitleri", "imsak", "öğle", "ikindi", "akşam", "yatsı", "güneş"]):
-            # Şehir tespiti
-            cities = ["istanbul", "ankara", "izmir", "bursa", "antalya", "adana", "konya", "gaziantep", "şanlıurfa", "kocaeli", "malatya", "erzurum", "trabzon", "diyarbakır", "eskişehir", "kayseri", "samsun", "elazığ", "sivas", "manisa"]
-            found_city = "Istanbul"
-            for city in cities:
-                if city in query_lower:
-                    found_city = city.title()
-                    break
+        # SENARYO 1: Namaz Vakti / Ezan Soruları (Public Aladhan API - Read)
+        if any(keyword in query_lower for keyword in ["ezan", "namaz vakti", "vakitleri", "imsak", "öğle", "ikindi", "akşam", "yatsı", "güneş", "saat kaçta", "kaçta"]):
+            found_city = extract_city_from_query(user_query)
             
             tool_to_call = "get_prayer_times"
             tool_args = {"city": found_city, "country": "Turkey"}
@@ -99,7 +113,6 @@ class IslamicToolCallingAgent:
             
             trace_logs.append({
                 "turn": turn_counter,
-                "action": "API Tool Call",
                 "tool_name": tool_to_call,
                 "arguments": tool_args,
                 "response": tool_result
@@ -118,7 +131,7 @@ class IslamicToolCallingAgent:
                     f"📌 *Bilgiler doğrudan {tool_result['source']} üzerinden çekilmiştir.*"
                 )
             else:
-                final_answer = f"⚠️ Namaz vakti verisi alınamadı: {tool_result.get('message')}"
+                final_answer = f"⚠️ {found_city} için namaz vakitleri alınamadı: {tool_result.get('message')}"
 
         # SENARYO 2: Soru/Fetva Kaydetme (SQLite - Write)
         elif any(keyword in query_lower for keyword in ["kaydet", "soru ekle", "fetva kaydet", "kayıt ekle", "veritabanına ekle"]):
@@ -132,12 +145,10 @@ class IslamicToolCallingAgent:
             tool_to_call = "save_inquiry_tool"
             tool_args = {"topic": topic, "question": user_query, "user_name": "Ayşe Nur"}
             
-            # Gerçek Araç Çağrısı
             tool_result = save_inquiry_tool(topic=topic, question=user_query, user_name="Ayşe Nur")
             
             trace_logs.append({
                 "turn": turn_counter,
-                "action": "SQLite Write Tool Call",
                 "tool_name": tool_to_call,
                 "arguments": tool_args,
                 "response": tool_result
@@ -155,18 +166,17 @@ class IslamicToolCallingAgent:
 
         # SENARYO 3: Konu veya Kelime Arama (SQLite - Read Search)
         elif any(keyword in query_lower for keyword in ["ara", "bul", "sorgula", "var mı", "sehiv", "kaza"]):
-            # Kelime ayıklama
             search_keyword = "namaz"
             words = user_query.split()
             for w in words:
-                if len(w) > 3 and w.lower() not in ["ara", "bul", "hakkında", "ilgili", "lütfen", "mi", "mı", "var"]:
-                    search_keyword = w
+                w_clean = w.strip("?.,!").lower()
+                if len(w_clean) > 3 and w_clean not in ["ara", "bul", "hakkında", "ilgili", "lütfen", "mi", "mı", "var", "kayıtları", "sorularını"]:
+                    search_keyword = w_clean
                     break
                     
             tool_to_call = "search_inquiries_tool"
             tool_args = {"keyword": search_keyword}
             
-            # Gerçek Araç Çağrısı
             tool_result = search_inquiries_tool(keyword=search_keyword)
             
             trace_logs.append({
@@ -194,12 +204,10 @@ class IslamicToolCallingAgent:
             tool_to_call = "get_all_inquiries_tool"
             tool_args = {}
             
-            # Gerçek Araç Çağrısı
             tool_result = get_all_inquiries_tool()
             
             trace_logs.append({
                 "turn": turn_counter,
-                "action": "SQLite Read Tool Call",
                 "tool_name": tool_to_call,
                 "arguments": tool_args,
                 "response": tool_result
@@ -223,22 +231,20 @@ class IslamicToolCallingAgent:
             final_answer = (
                 f"📖 **Namaz Vakti & Fıkıh Asistanı**:\n\n"
                 f"Sorgunuz: '{user_query}'\n\n"
-                f"Aşağıdaki işlemleri sistemimiz üzerinden yapabilirsiniz:\n"
-                f"1. 🕌 **Namaz Vakti Öğrenme**: 'İstanbul namaz vakitleri' veya 'Ankara ezan saatleri'\n"
+                f"Aşağıdaki tüm şehirler ve konular için asistanımızı kullanabilirsiniz:\n"
+                f"1. 🕌 **Namaz Vakti Öğrenme**: 'Bitlis imsak vakti ne zaman?', 'Ankara ezan saatleri' veya 'Van ikindi vakti'\n"
                 f"2. ✍️ **Soru Kaydetme**: 'Bu soruyu kaydet: Sehiv secdesi ne zaman yapılır?'\n"
                 f"3. 🔍 **Veritabanında Arama**: 'Sehiv hakkında kayıtları ara'\n"
                 f"4. 📋 **Tüm Kayıtları Listeleme**: 'Geçmiş soruları listele'\n"
             )
 
-        # Mesaj geçmişini güncelleyip Jinja2 promptunu tazeleme
         messages.append({"role": "assistant", "content": final_answer})
-        jinja_prompt_output = self.render_chat_prompt(messages)
+        updated_prompt = self.render_chat_prompt(messages)
 
-        return final_answer, trace_logs, jinja_prompt_output
+        return final_answer, trace_logs, updated_prompt
 
 if __name__ == "__main__":
     agent = IslamicToolCallingAgent()
-    ans, logs, prompt = agent.run("İstanbul için namaz vakitleri nedir?")
-    print("ANWER:\n", ans)
+    ans, logs, prompt = agent.run("bitlis imsak vakti ne zaman?")
+    print("ANSWER:\n", ans)
     print("\nLOGS:\n", logs)
-    print("\nJINJA PROMPT:\n", prompt)
