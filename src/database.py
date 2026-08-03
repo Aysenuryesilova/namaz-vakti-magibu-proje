@@ -63,6 +63,7 @@ def save_inquiry(topic: str, question: str, user_name: str = "Anonim") -> dict:
     Kullanıcının ilettiği soru veya fetva talebini SQLite veritabanına kaydeder.
     """
     try:
+        init_database()
         conn = get_db_connection()
         cursor = conn.cursor()
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -95,6 +96,7 @@ def get_all_inquiries() -> dict:
     Veritabanındaki tüm soru ve fetva kayıtlarını en son eklenenden başlayarak listeler.
     """
     try:
+        init_database()
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT id, topic, question, user_name, created_at FROM user_inquiries ORDER BY id DESC")

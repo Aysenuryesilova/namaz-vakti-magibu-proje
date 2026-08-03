@@ -18,7 +18,7 @@ import gradio as gr
 from agent import IslamicToolCallingAgent
 from database import get_all_inquiries, search_inquiries
 
-# Ajan motorumuzu başlatıyoruz
+# Ajan Motorumuzu Başlatıyoruz
 agent = IslamicToolCallingAgent()
 
 def process_query(user_message, history, hf_token_input):
@@ -53,7 +53,7 @@ def process_query(user_message, history, hf_token_input):
                 f"• Yanıt İçeriği: {log['response']}\n\n"
             )
     else:
-        logs_formatted += "Bu sorgu için harici bir araç çağrılmadı (Doğrudan Asistan Yanıtı).\n"
+        logs_formatted += "Harici bir araç çağrılmadı (Doğrudan Asistan Yanıtı).\n"
 
     # Gradio 5/6 Uyumlu Messages Formatında Chatbot Geçmişini Güncelleme
     new_history = history + [
@@ -103,7 +103,7 @@ with gr.Blocks(title="Namaz Vakti & Fıkıh Asistanı") as demo:
     gr.Markdown(
         """
         # 🕌 Namaz Vakti ve Fıkıh Asistanı (Magibu Yapay Zekâ Mimarisi)
-        *Public API Entegrasyonu (Aladhan API), SQLite Veritabanı Okuma/Yazma, Custom Jinja2 Chat Template ve Tool Calling Trace Logları*
+        *Public API Entegrasyonu (Aladhan API), SQLite Veritabanı Okuma/Yazma, Custom Jinja2 Chat Template ve Kesintisiz Soru Yanıt Motoru*
         """
     )
 

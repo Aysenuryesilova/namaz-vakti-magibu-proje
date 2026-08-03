@@ -99,6 +99,7 @@ class IslamicToolCallingAgent:
             
             trace_logs.append({
                 "turn": turn_counter,
+                "action": "API Tool Call",
                 "tool_name": tool_to_call,
                 "arguments": tool_args,
                 "response": tool_result
@@ -136,6 +137,7 @@ class IslamicToolCallingAgent:
             
             trace_logs.append({
                 "turn": turn_counter,
+                "action": "SQLite Write Tool Call",
                 "tool_name": tool_to_call,
                 "arguments": tool_args,
                 "response": tool_result
@@ -197,6 +199,7 @@ class IslamicToolCallingAgent:
             
             trace_logs.append({
                 "turn": turn_counter,
+                "action": "SQLite Read Tool Call",
                 "tool_name": tool_to_call,
                 "arguments": tool_args,
                 "response": tool_result
@@ -229,9 +232,9 @@ class IslamicToolCallingAgent:
 
         # Mesaj geçmişini güncelleyip Jinja2 promptunu tazeleme
         messages.append({"role": "assistant", "content": final_answer})
-        updated_prompt = self.render_chat_prompt(messages)
+        jinja_prompt_output = self.render_chat_prompt(messages)
 
-        return final_answer, trace_logs, updated_prompt
+        return final_answer, trace_logs, jinja_prompt_output
 
 if __name__ == "__main__":
     agent = IslamicToolCallingAgent()

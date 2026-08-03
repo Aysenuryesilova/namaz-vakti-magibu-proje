@@ -35,18 +35,19 @@ def get_prayer_times(city: str, country: str = "Turkey") -> dict:
         if response.status_code == 200 and data.get("code") == 200:
             timings = data["data"]["timings"]
             date_info = data["data"]["date"]["readable"]
+            
             return {
                 "status": "success",
                 "city": city.title(),
                 "country": country.title(),
                 "date": date_info,
                 "prayer_times": {
-                    "İmsak": timings.get("Fajr"),
-                    "Güneş": timings.get("Sunrise"),
-                    "Öğle": timings.get("Dhuhr"),
-                    "İkindi": timings.get("Asr"),
-                    "Akşam": timings.get("Maghrib"),
-                    "Yatsı": timings.get("Isha")
+                    "İmsak": timings["Fajr"],
+                    "Güneş": timings["Sunrise"],
+                    "Öğle": timings["Dhuhr"],
+                    "İkindi": timings["Asr"],
+                    "Akşam": timings["Maghrib"],
+                    "Yatsı": timings["Isha"]
                 },
                 "source": "Aladhan Public API (Diyanet Metodu - Method 13)"
             }
