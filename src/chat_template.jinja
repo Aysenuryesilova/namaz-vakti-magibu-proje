@@ -1,58 +1,80 @@
-{# 
-  ====================================================================================
+{# ====================================================================================
   ÖDEV 1: CUSTOM CHAT TEMPLATE (JINJA2) - NAMAZ VAKTI & FIKIH ASİSTANI
   ====================================================================================
-  Bu Jinja2 şablonu, bir Büyük Dil Modelinin (LLM) mesaj rollerini (system, user, 
-  assistant, tool_call, tool_response) hatasız ayırt etmesini ve verilen fonksiyon 
-  tanımlarını (tools) sistem mesajı bağlamına standart JSON olarak yerleştirmesini sağlar.
+  Bu Jinja2 şablonu, bir Dil Modelinin (LLM) mesaj rollerini (system, user, assistant,
+  tool_call, tool_response) ayırt etmesini ve verilen araç (tool) tanımlarını sistem
+  mesajına güvenli bir JSON olarak yerleştirmesini sağlar.
+  ==================================================================================== #}
 
-  Özellikleri:
-  1. ChatML özel etiketi yapısı kullanır: <|im_start|>role\ncontent<|im_end|>\n
-  2. 'tools' değişkeni sağlandığında, tüm araç şemalarını sistem mesajına enjekte eder.
-  3. 'add_generation_prompt' True olduğunda asistanın cevaba başlaması için <|im_start|>assistant\n ekler.
-  4. 'thinking' (düşünme) ve araç çağırma bloklarını temiz bir şekilde sarmalar.
-  ====================================================================================
-#}
+{# ------------------------------------------------------------------------------------
+   1. BÖLÜM: SİSTEM MESAJI VE ARAÇ (TOOL) ŞEMALARI YÖNETİMİ
+   ------------------------------------------------------------------------------------
+   Mantık: Modelin ilk mesajı HER ZAMAN bir sistem mesajı olmalıdır.
+   Eğer kullanıcı bir sistem mesajı vermemişse, şablonumuz otomatik varsayılan bir 
+   sistem mesajı (Default System Prompt) oluşturur.
+------------------------------------------------------------------------------------ #}
 
-{# --- 1. SİSTEM MESAJI VE ARAÇ ŞEMALARI YÖNETİMİ --- #}
 {%- if messages[0]['role'] == 'system' -%}
+    {# Kullanıcı kendi sistem mesajını vermişse onu alıp temizliyoruz (| trim) #}
     {{- "<|im_start|>system\n" + messages[0]['content'] | trim -}}
+    {# İlk mesaj sistem mesajı olduğu için döngüde tekrar basmamak adına mesajları 1. indisten başlatıyoruz #}
     {%- set loop_messages = messages[1:] -%}
 {%- else -%}
+    {# Kullanıcı sistem mesajı vermemişse varsayılan kurumsal sistem mesajımızı yazıyoruz #}
     {{- "<|im_start|>system\nSen yetkin, güvenilir bir Dini İlimler, Namaz Vakti ve Fıkıh Asistanısın. Kullanılabilir araçları (tools) kullanarak halüsinasyon görmeden doğru yanıtlar üretirsin." -}}
+    {# Sistem mesajı haricen verilmediği için tüm mesaj geçmişini döngüye alıyoruz #}
     {%- set loop_messages = messages -%}
 {%- endif -%}
 
-{# Eğer Jinja2 render motoruna araç tanımları (tools) iletilmişse, sistem mesajı sonuna ekle #}
+{# --- ARAÇ (TOOL) ENJEKSİYONU ---
+   Eğer Python tarafından şablona 'tools' değişkeni gönderilmişse, bunu sistem mesajının 
+   içine 'tojson' filtresiyle düzenli bir şekilde ekliyoruz.
+#}
 {%- if tools is defined and tools -%}
     {{- "\n\nKullanılabilir Araçlar (Tools):\n" -}}
     {{- tools | tojson(indent=2) -}}
     {{- "\nFonksiyon çağırmak istediğinde çıktını şu formatta üret: <tool_call>{\"name\": \"fonksiyon_adi\", \"arguments\": {...}}</tool_call>" -}}
 {%- endif -%}
 
+{# Sistem mesajı bloğunu kapatıyoruz #}
 {{- "<|im_end|>\n" -}}
 
-{# --- 2. SOHBET GEÇMİŞİ DÖNGÜSÜ --- #}
+
+{# ------------------------------------------------------------------------------------
+   2. BÖLÜM: SOHBET GEÇMİŞİ DÖNGÜSÜ (CHAT HISTORY)
+   ------------------------------------------------------------------------------------
+   Sırayla gelen kullanıcı, asistan ve araç yanıtlarını ChatML standart formatına
+   (<|im_start|>rol\niçerik<|im_end|>) dönüştürüyoruz.
+------------------------------------------------------------------------------------ #}
+
 {%- for message in loop_messages -%}
-    {# Kullanıcı Mesajı #}
+    {# A) KULLANICI MESAJI #}
     {%- if message['role'] == 'user' -%}
         {{- "<|im_start|>user\n" + message['content'] | trim + "<|im_end|>\n" -}}
     
-    {# Asistan (Model) Yanıtı #}
+    {# B) ASİSTAN (MODEL) YANITI #}
     {%- elif message['role'] == 'assistant' -%}
         {{- "<|im_start|>assistant\n" + message['content'] | trim + "<|im_end|>\n" -}}
     
-    {# Modelin Araç Çağırma İsteği (Tool Call) #}
+    {# C) MODELİN ARAÇ ÇAĞIRMA İSTEĞİ (Tool Call) #}
     {%- elif message['role'] == 'tool_call' -%}
         {{- "<|im_start|>tool_call\n" + message['content'] | trim + "<|im_end|>\n" -}}
     
-    {# Dış Dünyadan (API / Veritabanı) Dönen Araç Yanıtı (Tool Response) #}
+    {# D) DIŞ DÜNYADAN (API / Veritabanı) DÖNEN ARAÇ YANITI (Tool Response)
+       Not: Bazı kütüphaneler 'tool', bazıları 'tool_response' der. İkisini de kapsıyoruz. #}
     {%- elif message['role'] in ['tool', 'tool_response'] -%}
         {{- "<|im_start|>tool_response\n" + message['content'] | trim + "<|im_end|>\n" -}}
     {%- endif -%}
 {%- endfor -%}
 
-{# --- 3. GENERATION PROMPT (MODELİN SIRADAKİ CEVABINI TETİKLEME) --- #}
+
+{# ------------------------------------------------------------------------------------
+   3. BÖLÜM: GENERATION PROMPT (TETİKLEYİCİ)
+   ------------------------------------------------------------------------------------
+   add_generation_prompt == True ise: Modelden YENİ BİR CEVAP üretmesini istiyoruz demektir.
+   Bu yüzden dizinin en sonuna '<|im_start|>assistant\n' ekleyerek lafı modele bırakıyoruz.
+------------------------------------------------------------------------------------ #}
+
 {%- if add_generation_prompt -%}
     {{- "<|im_start|>assistant\n" -}}
 {%- endif -%}
