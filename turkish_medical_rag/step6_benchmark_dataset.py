@@ -1,0 +1,62 @@
+# ==============================================================================
+# ADIM 6: BENCHMARK TEST VERİ SETİ OLUŞTURMA (30 SORU)
+# Yapı: 20 Pozitif Soru (Dokümanda Cevabı Var) + 10 Negatif Soru (Cevap YOK)
+# Çıktı: benchmark_questions.json
+# ==============================================================================
+
+import json
+
+# 1. Pozitif Sorular (Veri setimizdeki gerçek tıbbi konulardan türetilmiştir)
+positive_questions = [
+    {"id": "Q_POS_01", "type": "positive", "question": "Miyom belirtileri ve şikayetleri nelerdir?", "category": "Jinekoloji"},
+    {"id": "Q_POS_02", "type": "positive", "question": "Kronik sistit nedir ve mesanede hangi şikayetlere yol açar?", "category": "Üroloji"},
+    {"id": "Q_POS_03", "type": "positive", "question": "Psikolojik sınır koymak neden önemlidir?", "category": "Psikoloji"},
+    {"id": "Q_POS_04", "type": "positive", "question": "Escherichia coli bakterisi idrar yolu enfeksiyonuna neden olur mu?", "category": "Mikrobiyoloji"},
+    {"id": "Q_POS_05", "type": "positive", "question": "İdrar kültüründe bakteri üremesi ne anlama gelir?", "category": "Üroloji"},
+    {"id": "Q_POS_06", "type": "positive", "question": "Transvajinal ultrasonografi hangi organları incelemek için kullanılır?", "category": "Radyoloji"},
+    {"id": "Q_POS_07", "type": "positive", "question": "Vajinal mantar enfeksiyonu belirtileri nelerdir?", "category": "Jinekoloji"},
+    {"id": "Q_POS_08", "type": "positive", "question": "İdrarda kan görülmesi (hematüri) hangi durumların belirtisi olabilir?", "category": "Üroloji"},
+    {"id": "Q_POS_09", "type": "positive", "question": "Sistoskopi işlemi nasıl yapılır ve ne amaçla kullanılır?", "category": "Üroloji"},
+    {"id": "Q_POS_10", "type": "positive", "question": "İdrarı tam boşaltamama hissi hangi rahatsızlıklarda görülür?", "category": "Üroloji"},
+    {"id": "Q_POS_11", "type": "positive", "question": "Hayır demeyi öğrenmenin psikolojik sağlığa faydaları nelerdir?", "category": "Psikoloji"},
+    {"id": "Q_POS_12", "type": "positive", "question": "İdrar yolu enfeksiyonlarında antibiyotik kullanımı nasıl olmalıdır?", "category": "Farmakoloji"},
+    {"id": "Q_POS_13", "type": "positive", "question": "Sık idrara çıkma ihtiyacı (urgency) hangi hastalıkların habercisidir?", "category": "Üroloji"},
+    {"id": "Q_POS_14", "type": "positive", "question": "Menopoz döneminde vajinal dokularda ne gibi değişiklikler olur?", "category": "Jinekoloji"},
+    {"id": "Q_POS_15", "type": "positive", "question": "Gebelikte idrar yolu enfeksiyonu riski neden artar?", "category": "Kadın Doğum"},
+    {"id": "Q_POS_16", "type": "positive", "question": "Pelvik ağrı ve kasık ağrısı neden kaynaklanır?", "category": "Genel Tıp"},
+    {"id": "Q_POS_17", "type": "positive", "question": "Mesane duvarı kalınlaşması ultrasonografi ile nasıl tespit edilir?", "category": "Radyoloji"},
+    {"id": "Q_POS_18", "type": "positive", "question": "Klamidya ve Mikoplazma mikropları kronik sistite yol açar mı?", "category": "Enfeksiyon"},
+    {"id": "Q_POS_19", "type": "positive", "question": "Anksiyete ve stres idrar yapma sıklığını etkiler mi?", "category": "Psikiyatri"},
+    {"id": "Q_POS_20", "type": "positive", "question": "İdrar analizinde lökosit ve nitrit pozitifliği neyi gösterir?", "category": "Laboratuvar"}
+]
+
+# 2. Negatif Sorular (Veri setimizde KESİNLİKLE cevabı bulunmayan alakasız/farklı sorular)
+negative_questions = [
+    {"id": "Q_NEG_01", "type": "negative", "question": "Bitcoin ve Kripto para madenciliği nasıl yapılır?", "category": "Finans/Teknoloji"},
+    {"id": "Q_NEG_02", "type": "negative", "question": "Kuantum bilgisayarlarında qubit dolaşıklığı nasıl çalışır?", "category": "Fizik/Teknoloji"},
+    {"id": "Q_NEG_03", "type": "negative", "question": "Fransa'nın başkenti Paris'in nüfusu ve tarihi gezilecek yerleri nelerdir?", "category": "Coğrafya"},
+    {"id": "Q_NEG_04", "type": "negative", "question": "Python programlama dilinde rekürsif (recursive) fonksiyon nasıl yazılır?", "category": "Yazılım"},
+    {"id": "Q_NEG_05", "type": "negative", "question": "Otomobillerde motor yağı değişimi kaç kilometrede bir yapılmalıdır?", "category": "Otomotiv"},
+    {"id": "Q_NEG_06", "type": "negative", "question": "Osmanlı Devleti hangi yılda ve kim tarafından kurulmuştur?", "category": "Tarih"},
+    {"id": "Q_NEG_07", "type": "negative", "question": "Photoshop programında görselin arka planı nasıl şeffaf yapılır?", "category": "Tasarım"},
+    {"id": "Q_NEG_08", "type": "negative", "question": "Mars gezegenine ilk insansız uzay aracı ne zaman indi?", "category": "Uzay"},
+    {"id": "Q_NEG_09", "type": "negative", "question": "İtalyan usulü napolitan pizza hamuru tarifinin püf noktaları nelerdir?", "category": "Yemek"},
+    {"id": "Q_NEG_10", "type": "negative", "question": "Elektrikli araç bataryalarının şarj olma süreleri nasıl optimize edilir?", "category": "Teknoloji"}
+]
+
+# 30 Soruyu birleştiriyoruz
+all_benchmark_questions = positive_questions + negative_questions
+
+# Diske kaydediyoruz
+output_file = "benchmark_questions.json"
+with open(output_file, "w", encoding="utf-8") as f:
+    json.dump(all_benchmark_questions, f, ensure_ascii=False, indent=4)
+
+print("="*50)
+print("📊 BENCHMARK TEST VERİ SETİ OLUŞTURULDU")
+print("="*50)
+print(f"✅ Pozitif Soru Sayısı (Cevabı Var): {len(positive_questions)}")
+print(f"✅ Negatif Soru Sayısı (Cevabı YOK): {len(negative_questions)}")
+print(f"✅ Toplam Test Sorusu: {len(all_benchmark_questions)}")
+print(f"💾 Kaydedilen Dosya: '{output_file}'")
+print("="*50)

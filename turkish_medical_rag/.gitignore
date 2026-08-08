@@ -1,0 +1,4 @@
+embedded_chunks.json
+processed_chunks.json
+selected_raw_articles.json
+chroma_db_storage/
