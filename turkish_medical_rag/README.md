@@ -1,3 +1,19 @@
+---
+language:
+- tr
+license: cc-by-4.0
+task_categories:
+- text-retrieval
+- feature-extraction
+tags:
+- rag
+- medical
+- turkish
+pretty_name: Turkish Medical RAG Dataset
+size_categories:
+- 1K<n<10K
+---
+
 # 🩺 Türkçe Tıbbi Makaleler RAG & Vektör Veritabanı (Vector Database & Benchmarking)
 
 Bu proje, Hugging Face üzerindeki **`umutertugrul/turkish-medical-articles`** veri kümesinden rastgele seçilen **1.000 adet Türkçe tıbbi makale** kullanılarak geliştirilmiş endüstriyel standartlarda bir **RAG (Retrieval-Augmented Generation)** ve **Vektör Veritabanı** mimarisidir.
