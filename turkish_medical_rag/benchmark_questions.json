@@ -159,24 +159,24 @@
         "id": "Q_NEG_07",
         "type": "negative",
         "question": "Miyom ameliyatından sonra hamile kalma şansı nasıl etkilenir?",
-        "category": "Jinekoloji (sınır durumu)"
+        "category": "Jinekoloji (Sınır Durumu)"
     },
     {
         "id": "Q_NEG_08",
         "type": "negative",
         "question": "Çocuklarda idrar yolu enfeksiyonu yetişkinlerden nasıl farklı seyreder?",
-        "category": "Üroloji (sınır durumu)"
+        "category": "Üroloji (Sınır Durumu)"
     },
     {
         "id": "Q_NEG_09",
         "type": "negative",
         "question": "İş yerinde sınır koyamama durumu performans değerlendirmesini nasıl etkiler?",
-        "category": "Psikoloji (sınır durumu)"
+        "category": "Psikoloji (Sınır Durumu)"
     },
     {
         "id": "Q_NEG_10",
         "type": "negative",
         "question": "Transvajinal ultrasonografi gebelikte hangi haftadan itibaren güvenli sayılır?",
-        "category": "Radyoloji (sınır durumu)"
+        "category": "Radyoloji (Sınır Durumu)"
     }
 ]

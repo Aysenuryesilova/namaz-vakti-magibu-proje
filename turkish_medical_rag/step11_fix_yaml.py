@@ -4,7 +4,7 @@
 
 from huggingface_hub import HfApi
 
-HF_TOKEN = "YOUR_HF_TOKEN_HERE"
+HF_TOKEN = "YOUR_HUGGING_FACE_TOKEN"
 DATASET_REPO_ID = "Aysenur44/turkish-medical-rag-dataset"
 
 # 1. Hugging Face'in istediği YAML Başlık Formatı

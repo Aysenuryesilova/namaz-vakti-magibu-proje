@@ -1,5 +1,6 @@
 # ==============================================================================
-# TUM .py/.json pipeline
+# ADIM 8 (DUZELTILMIS): OTOMATIK KULLANICI ALMA VE HUGGING FACE YUKLEME
+# Degisiklik: artik sadece dataset + README degil, TUM .py/.json pipeline
 # dosyalari da "scripts/" klasoru altinda repoya yukleniyor. Boylece
 # sonuclarin nasil uretildigi HF tarafinda da denetlenebilir/tekrarlanabilir
 # oluyor.
@@ -10,7 +11,17 @@ import os
 from datasets import Dataset
 from huggingface_hub import HfApi
 
-HF_TOKEN = "YOUR_HF_TOKEN_HERE"
+# GUVENLIK: Token'i dogrudan kodun icine yazmadım - repo public oldugu icin
+# herkes gorebilirmiş. Bunun yerine ortam degiskeninden okuyacağım.
+# Windows'ta calistirmadan once terminale sunu yaz (tirnaksiz):
+#   set HF_TOKEN=hf_xxx...senin_gercek_tokenin...
+# Sonra ayni terminalde: python step10_upload_to_hf.py
+HF_TOKEN = os.environ.get("HF_TOKEN")
+if not HF_TOKEN:
+    raise ValueError(
+        "HF_TOKEN ortam degiskeni bulunamadi. Once terminalde "
+        "'set HF_TOKEN=hf_xxx...' calistirin, sonra bu scripti tekrar calistirin."
+    )
 
 api = HfApi(token=HF_TOKEN)
 
