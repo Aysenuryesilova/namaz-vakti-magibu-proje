@@ -1,12 +1,12 @@
 {
     "threshold": 0.6,
-    "accuracy": 100.0,
-    "precision": 100.0,
+    "accuracy": 90.0,
+    "precision": 86.95652173913044,
     "recall": 100.0,
     "confusion_matrix": {
         "TP": 20,
-        "TN": 10,
-        "FP": 0,
+        "TN": 7,
+        "FP": 3,
         "FN": 0
     },
     "results": [
@@ -299,30 +299,30 @@
         {
             "question_id": "Q_NEG_07",
             "question_type": "negative",
-            "question": "Photoshop programında görselin arka planı nasıl şeffaf yapılır?",
-            "similarity_score": 0.35372018814086914,
-            "is_above_threshold": false,
-            "system_status": "NO_ANSWER_FALLBACK",
-            "system_output": "Bu sorunun cevabı dokümanlarımda yer almamaktadır",
-            "retrieved_url": null,
-            "eval_result": "✅ BAŞARILI (TN - Doğru Elendi)"
+            "question": "Miyom ameliyatından sonra hamile kalma şansı nasıl etkilenir?",
+            "similarity_score": 0.759030282497406,
+            "is_above_threshold": true,
+            "system_status": "ANSWER_FOUND",
+            "system_output": "etmesini zorlaştırabilirler. Saplı submuköz miyomlar rahim kanalını kapatarak spermlerin geçişini zorlaştırabilirler. Sa...",
+            "retrieved_url": "https://www.doktorsitesi.com/blog/makale/miyom-belirtileri",
+            "eval_result": "❌ HATALI (FP - Uydurma Cevap)"
         },
         {
             "question_id": "Q_NEG_08",
             "question_type": "negative",
-            "question": "Mars gezegenine ilk insansız uzay aracı ne zaman indi?",
-            "similarity_score": 0.20978283882141113,
-            "is_above_threshold": false,
-            "system_status": "NO_ANSWER_FALLBACK",
-            "system_output": "Bu sorunun cevabı dokümanlarımda yer almamaktadır",
-            "retrieved_url": null,
-            "eval_result": "✅ BAŞARILI (TN - Doğru Elendi)"
+            "question": "Çocuklarda idrar yolu enfeksiyonu yetişkinlerden nasıl farklı seyreder?",
+            "similarity_score": 0.6603827476501465,
+            "is_above_threshold": true,
+            "system_status": "ANSWER_FOUND",
+            "system_output": "İdrar kaçırma şikayeti, çocuk ürolojisi polikliniklerine başvuran hastaların çok önemli bir kısmında mevcuttur. Çocuklar...",
+            "retrieved_url": "https://www.doktorsitesi.com/blog/makale/cocuklarda-idrar-kacirma",
+            "eval_result": "❌ HATALI (FP - Uydurma Cevap)"
         },
         {
             "question_id": "Q_NEG_09",
             "question_type": "negative",
-            "question": "İtalyan usulü napolitan pizza hamuru tarifinin püf noktaları nelerdir?",
-            "similarity_score": 0.4619866609573364,
+            "question": "İş yerinde sınır koyamama durumu performans değerlendirmesini nasıl etkiler?",
+            "similarity_score": 0.5132830739021301,
             "is_above_threshold": false,
             "system_status": "NO_ANSWER_FALLBACK",
             "system_output": "Bu sorunun cevabı dokümanlarımda yer almamaktadır",
@@ -332,13 +332,13 @@
         {
             "question_id": "Q_NEG_10",
             "question_type": "negative",
-            "question": "Elektrikli araç bataryalarının şarj olma süreleri nasıl optimize edilir?",
-            "similarity_score": 0.38737308979034424,
-            "is_above_threshold": false,
-            "system_status": "NO_ANSWER_FALLBACK",
-            "system_output": "Bu sorunun cevabı dokümanlarımda yer almamaktadır",
-            "retrieved_url": null,
-            "eval_result": "✅ BAŞARILI (TN - Doğru Elendi)"
+            "question": "Transvajinal ultrasonografi gebelikte hangi haftadan itibaren güvenli sayılır?",
+            "similarity_score": 0.7269333004951477,
+            "is_above_threshold": true,
+            "system_status": "ANSWER_FOUND",
+            "system_output": "ultrason (11-14. haftalar arasında) veya ileri haftalarda (28-32. haftalar arasında) tekrar değerlendirme yapılabilir. D...",
+            "retrieved_url": "https://www.doktorsitesi.com/blog/makale/detayli-ultrason-tanimi-uygulama-yontemleri-ve-zamanlamasi",
+            "eval_result": "❌ HATALI (FP - Uydurma Cevap)"
         }
     ]
 }

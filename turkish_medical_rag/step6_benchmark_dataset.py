@@ -38,10 +38,10 @@ negative_questions = [
     {"id": "Q_NEG_04", "type": "negative", "question": "Python programlama dilinde rekürsif (recursive) fonksiyon nasıl yazılır?", "category": "Yazılım"},
     {"id": "Q_NEG_05", "type": "negative", "question": "Otomobillerde motor yağı değişimi kaç kilometrede bir yapılmalıdır?", "category": "Otomotiv"},
     {"id": "Q_NEG_06", "type": "negative", "question": "Osmanlı Devleti hangi yılda ve kim tarafından kurulmuştur?", "category": "Tarih"},
-    {"id": "Q_NEG_07", "type": "negative", "question": "Photoshop programında görselin arka planı nasıl şeffaf yapılır?", "category": "Tasarım"},
-    {"id": "Q_NEG_08", "type": "negative", "question": "Mars gezegenine ilk insansız uzay aracı ne zaman indi?", "category": "Uzay"},
-    {"id": "Q_NEG_09", "type": "negative", "question": "İtalyan usulü napolitan pizza hamuru tarifinin püf noktaları nelerdir?", "category": "Yemek"},
-    {"id": "Q_NEG_10", "type": "negative", "question": "Elektrikli araç bataryalarının şarj olma süreleri nasıl optimize edilir?", "category": "Teknoloji"}
+    {"id": "Q_NEG_07", "type": "negative", "question": "Miyom ameliyatından sonra hamile kalma şansı nasıl etkilenir?", "category": "Jinekoloji (sınır durumu)"},
+{"id": "Q_NEG_08", "type": "negative", "question": "Çocuklarda idrar yolu enfeksiyonu yetişkinlerden nasıl farklı seyreder?", "category": "Üroloji (sınır durumu)"},
+{"id": "Q_NEG_09", "type": "negative", "question": "İş yerinde sınır koyamama durumu performans değerlendirmesini nasıl etkiler?", "category": "Psikoloji (sınır durumu)"},
+{"id": "Q_NEG_10", "type": "negative", "question": "Transvajinal ultrasonografi gebelikte hangi haftadan itibaren güvenli sayılır?", "category": "Radyoloji (sınır durumu)"}
 ]
 
 # 30 Soruyu birleştiriyoruz

@@ -158,25 +158,25 @@
     {
         "id": "Q_NEG_07",
         "type": "negative",
-        "question": "Photoshop programında görselin arka planı nasıl şeffaf yapılır?",
-        "category": "Tasarım"
+        "question": "Miyom ameliyatından sonra hamile kalma şansı nasıl etkilenir?",
+        "category": "Jinekoloji (sınır durumu)"
     },
     {
         "id": "Q_NEG_08",
         "type": "negative",
-        "question": "Mars gezegenine ilk insansız uzay aracı ne zaman indi?",
-        "category": "Uzay"
+        "question": "Çocuklarda idrar yolu enfeksiyonu yetişkinlerden nasıl farklı seyreder?",
+        "category": "Üroloji (sınır durumu)"
     },
     {
         "id": "Q_NEG_09",
         "type": "negative",
-        "question": "İtalyan usulü napolitan pizza hamuru tarifinin püf noktaları nelerdir?",
-        "category": "Yemek"
+        "question": "İş yerinde sınır koyamama durumu performans değerlendirmesini nasıl etkiler?",
+        "category": "Psikoloji (sınır durumu)"
     },
     {
         "id": "Q_NEG_10",
         "type": "negative",
-        "question": "Elektrikli araç bataryalarının şarj olma süreleri nasıl optimize edilir?",
-        "category": "Teknoloji"
+        "question": "Transvajinal ultrasonografi gebelikte hangi haftadan itibaren güvenli sayılır?",
+        "category": "Radyoloji (sınır durumu)"
     }
 ]
