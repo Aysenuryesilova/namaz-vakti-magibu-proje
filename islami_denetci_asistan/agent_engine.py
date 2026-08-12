@@ -2,7 +2,7 @@
 ==============================================================================
 İSLÂMİ DENETÇİ ASİSTAN AGENT MOTORU (AGENT_ENGINE.PY)
 ==============================================================================
-BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ AÇIKLAMA):
+BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ VE TEKNİK DÜZELTME):
 ------------------------------------------------------------------------------
 1. Agentic Workflow & ReAct Döngüsü:
    Asistan sadece bir metin üretici değil; kullanıcının sorusunu analiz eden,
@@ -11,14 +11,12 @@ BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ AÇIKLAMA):
 
 2. Sohbet Geçmişi ve Oturum Belleği (Conversational State & Memory):
    `conversation_history` değişkeni kullanıcının sohbet boyunca sorduğu önceki
-   soruları ve konumları hatırlar (Örn: Kullanıcı önce 'İstanbul namaz vakitleri'
-   deyip ardından 'peki kıble açısı nedir?' sorduğunda İstanbul şehrini unutmaz).
+   soruları ve konumları hatırlar.
 
-3. Akıllı NLU (Doğal Dil Anlama) & Fallback Engine:
-   Modelin çevrimdışı olduğu durumlarda dahi kullanıcıyı cevapsız bırakmaz,
-   soru tipini (Namaz, Kıble, Zekat, Ayet, Esma, Hadis) tespit edip doğru
-   Python aracını otomatik yürütür. Allah'ın 99 isminin tamamı (elmelik, melik,
-   er-rahman, rahman, es-selam, selam vb.) esnek olarak algılanır.
+3. Kesin NLU Sözcük Sınırı (Word Boundary Regex Matching):
+   'ali', 'hak', 'nur' gibi kısa Esmaül Hüsna isimlerinin 'ayettir' veya 'hakkında'
+   gibi kelimeler içindeki harflerle yanlışlıkla çakışması (substring collision)
+   regex tam kelime sınırı (`\\bname\\b`) ile %100 önlenmiştir.
 ==============================================================================
 """
 
@@ -104,7 +102,11 @@ class IslamicAgentEngine:
             city = self.extract_city(user_query)
             return [{"function": {"name": "calculate_qibla_direction", "arguments": {"city": city}}}]
 
-        # 3. Esmaül Hüsna (ALLAH'IN 99 İSMİNİN TAMAMI - ESNEK EŞLEŞTİRME)
+        # 3. Kur'an Ayet / Sure Arama (Öncelikli: 504. ayet, kaç sure, Nebe suresi, 100. sure vb.)
+        if any(kw in q for kw in ["sure", "suresi", "ayet", "ayeti", "kuran kaç", "meal"]):
+            return [{"function": {"name": "search_quran_verse", "arguments": {"query_or_surah": user_query}}}]
+
+        # 4. Esmaül Hüsna (ALLAH'IN 99 İSMİNİN TAMAMI - KELİME SINIRI ILE KESİN EŞLEŞTİRME)
         all_99_esma = list(tools.ESMAUL_HUSNA.keys())
         q_norm = (
             q.replace("i̇", "i").replace("ı", "i").replace("â", "a").replace("î", "i").replace("û", "u")
@@ -118,14 +120,21 @@ class IslamicAgentEngine:
                     q_norm = candidate
                     break
 
-        matched_esma = next((name for name in all_99_esma if name == q_norm or name in q or name in q_norm), None)
-        if matched_esma or "esma" in q or "allah'ın isim" in q or "selam" in q:
+        matched_esma = None
+        for name in all_99_esma:
+            if len(name) <= 4:
+                # Kısa isimler için tam kelime sınırı kontrolü (\b)
+                if re.search(r'\b' + re.escape(name) + r'\b', q_norm) or re.search(r'\b' + re.escape(name) + r'\b', q):
+                    matched_esma = name
+                    break
+            else:
+                if name == q_norm or name in q or name in q_norm:
+                    matched_esma = name
+                    break
+
+        if matched_esma or "esma" in q or "allah'ın isim" in q:
             target_name = matched_esma if matched_esma else user_query
             return [{"function": {"name": "get_esmaul_husna", "arguments": {"query": target_name}}}]
-
-        # 4. Kur'an Ayet / Sure Arama (504. ayet, Nebe suresi, 100. sure, sure meali vb.)
-        if any(kw in q for kw in ["sure", "suresi", "ayet", "ayeti", "kuran kaç", "meal"]):
-            return [{"function": {"name": "search_quran_verse", "arguments": {"query_or_surah": user_query}}}]
 
         # 5. Zekat hesabı (SADECE zekat veya nisab kelimesi geçiyorsa)
         if "zekat" in q or "nisab" in q:
@@ -258,8 +267,6 @@ class IslamicAgentEngine:
 
 if __name__ == "__main__":
     engine = IslamicAgentEngine()
-    
-    queries = ["elmelik ne demek", "melik nedir", "er-rahman anlamı", "rahman ne demek", "es-selam ne demek", "selam ne demek"]
-    for q in queries:
-        ans, _, _ = engine.run(q)
-        print(f"=== {q} ===\n{ans}\n")
+    ans, logs, _ = engine.run("Kur'an-ı Kerim kaç suredir ve kaç ayettir?")
+    print("TEST 6 CORRECTION RESULT:\n", ans)
+    print("CALLED TOOLS:", [l['tool_name'] for l in logs])
