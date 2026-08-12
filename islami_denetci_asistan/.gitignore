@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Vector DB & Temp
+chroma_db/
+scratch/
+*.log
+
+# Environments
+venv/
+.env
