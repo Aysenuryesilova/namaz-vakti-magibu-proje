@@ -4,13 +4,14 @@
 ==============================================================================
 BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ VE TEKNİK DÜZELTME):
 ------------------------------------------------------------------------------
-1. Çift Araç Çağrısı Önleme (De-duplication):
-   Tek bir kullanıcı mesajı için aynı aracın iki kez tetiklenmesi veya aynı
-   çıktının iki kez basılması `dict.fromkeys(tool_outputs)` ile önlenmiştir.
+1. Kapsamlı Fıkıh Yönlendirme (Oruç, Zekat, Hac, Kurban, Yemin RAG Triggering):
+   'oruç', 'ramazan', 'imsak', 'sahur', 'iftar', 'zekat', 'hac', 'kurban', 'yemin'
+   gibi tüm ilmihal ve fıkıh konuları doğrudan Vektör RAG motoruna
+   (`islamic_knowledge_question`) yönlendirilir.
 
-2. Fıkıh ve Abdest Sorguları Önceliği (Fiqh Priority Routing):
-   'abdest', 'gusül', 'teheccüd', 'sehiv' gibi fıkhi kavramlar doğrudan
-   Vektör RAG motoruna (`islamic_knowledge_question`) yönlendirilir.
+2. Gereksiz Web Aramasını Önleme (Single Tool Execution Filter):
+   Vektör RAG motorundan kesin ilmihal yanıtı alındığında gereksiz yere ikinci
+   bir web araması (`web_search_tool`) tetiklenmez.
 ==============================================================================
 """
 
@@ -87,7 +88,7 @@ class IslamicAgentEngine:
         q = user_query.lower().strip()
         
         # 1. Namaz vakitleri (Sivas Gemerek, İzmit, Kadıköy, Muş vb.)
-        if any(kw in q for kw in ["namaz vakit", "ezan vakit", "imsak", "sahur", "iftar", "vakitleri", "ezan"]):
+        if any(kw in q for kw in ["namaz vakit", "ezan vakit", "vakitleri", "ezan"]):
             city = self.extract_city(user_query)
             return [{"function": {"name": "calculate_prayer_times", "arguments": {"city": city}}}]
 
@@ -96,8 +97,8 @@ class IslamicAgentEngine:
             city = self.extract_city(user_query)
             return [{"function": {"name": "calculate_qibla_direction", "arguments": {"city": city}}}]
 
-        # 3. Fıkıh ve Abdest Soruları (ÖNCELİKLİ Vektör RAG Motoru)
-        if any(kw in q for kw in ["abdest", "gusül", "teheccüd", "sehiv", "bozar mı", "vacip", "farz"]):
+        # 3. Fıkıh, İbadet ve İlmihal Soruları (Oruç, Abdest, Zekat, Hac, Kurban, Yemin, Teheccüd, Sehiv vb. RAG Motoru)
+        if any(kw in q for kw in ["oruç", "oruc", "ramazan", "imsak", "sahur", "iftar", "abdest", "gusül", "teheccüd", "sehiv", "bozar mı", "vacip", "farz", "kurban", "yemin", "kefaret", "helal", "haram"]):
             return [{"function": {"name": "islamic_knowledge_question", "arguments": {"question": user_query}}}]
 
         # 4. Kur'an Ayet / Sure Arama (504. ayet, kaç sure, Nebe suresi, 100. sure vb.)
@@ -133,8 +134,8 @@ class IslamicAgentEngine:
             target_name = matched_esma if matched_esma else user_query
             return [{"function": {"name": "get_esmaul_husna", "arguments": {"query": target_name}}}]
 
-        # 6. Zekat hesabı (SADECE zekat veya nisab kelimesi geçiyorsa)
-        if "zekat" in q or "nisab" in q:
+        # 6. Zekat hesabı (SADECE özel hesaplama rakamları varsa)
+        if "zekat hesabı" in q or ("zekat" in q and any(c.isdigit() for c in q)):
             numbers = [float(n) for n in re.findall(r'\d+', q)]
             gold = numbers[0] if len(numbers) > 0 else 100.0
             cash = numbers[1] if len(numbers) > 1 else 0.0
@@ -157,15 +158,15 @@ class IslamicAgentEngine:
             return [{"function": {"name": "verify_hadith_source", "arguments": {"hadith_query": user_query}}}]
 
         # 10. Ramazan / İslami Takvim
-        if "ramazan" in q or "bayram" in q or "hicri" in q:
+        if "bayram" in q or "hicri" in q:
             return [{"function": {"name": "find_islamic_event", "arguments": {"event_name": "ramazan"}}}]
 
         # 11. Döviz / Dolar / Güncel Haber / Web Araması
-        if any(kw in q for kw in ["dolar", "euro", "güncel", "haber", "duyuru", "hac", "umre", "diyanet"]):
+        if any(kw in q for kw in ["dolar", "euro", "güncel", "haber", "duyuru", "diyanet"]):
             return [{"function": {"name": "web_search_tool", "arguments": {"query": user_query}}}]
 
-        # 12. Genel Dini Soru Yanıtlama (Web Araması Fallback)
-        return [{"function": {"name": "web_search_tool", "arguments": {"query": user_query}}}]
+        # 12. Genel Dini Soru Yanıtlama (Vektör RAG Motoru)
+        return [{"function": {"name": "islamic_knowledge_question", "arguments": {"question": user_query}}}]
 
     def run(self, user_query: str) -> tuple[str, list[dict], str]:
         """
@@ -264,10 +265,7 @@ class IslamicAgentEngine:
 
 if __name__ == "__main__":
     engine = IslamicAgentEngine()
-    ans1, _, _ = engine.run("abdest nedir")
-    print("=== ABDEST NEDİR SIRALAMASI ===")
-    print(ans1)
-    
-    ans2, _, _ = engine.run("abdest nasıl alınır?")
-    print("\n=== ABDEST NASIL ALINIR SIRALAMASI ===")
-    print(ans2)
+    ans, logs, _ = engine.run("oruç nedir")
+    print("=== ORUÇ NEDİR ENGINE OUTPUT ===")
+    print(ans)
+    print("CALLED TOOLS:", [l['tool_name'] for l in logs])
