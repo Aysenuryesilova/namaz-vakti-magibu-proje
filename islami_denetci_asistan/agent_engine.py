@@ -4,18 +4,13 @@
 ==============================================================================
 BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ VE TEKNİK DÜZELTME):
 ------------------------------------------------------------------------------
-1. Gerçek ReAct & LLM Tool Result Sentez Döngüsü (LLM Synthesis):
-   Model bir aracı (tool) çağırdıktan sonra, araç çıktısı `role: tool` mesajı
-   olarak yerel modele (Qwen2.5:3b) geri beslenir. Yerel LLM, araç çıktısını
-   Sistem İstemi (System Prompt) kuralları ve Diyanet üslubu çerçevesinde
-   yorumlayarak nihai doğal dil cevabını üretir.
+1. Çift Araç Çağrısı Önleme (De-duplication):
+   Tek bir kullanıcı mesajı için aynı aracın iki kez tetiklenmesi veya aynı
+   çıktının iki kez basılması `dict.fromkeys(tool_outputs)` ile önlenmiştir.
 
-2. Sohbet Geçmişi ve Oturum Belleği (Conversational State & Memory):
-   `conversation_history` değişkeni kullanıcının sohbet boyunca sorduğu önceki
-   soruları ve konumları hatırlar.
-
-3. Kesin NLU Sözcük Sınırı (Word Boundary Regex Matching):
-   'ali', 'hak', 'nur' gibi kısa Esmaül Hüsna isimlerinin çakışması önlenmiştir.
+2. Fıkıh ve Abdest Sorguları Önceliği (Fiqh Priority Routing):
+   'abdest', 'gusül', 'teheccüd', 'sehiv' gibi fıkhi kavramlar doğrudan
+   Vektör RAG motoruna (`islamic_knowledge_question`) yönlendirilir.
 ==============================================================================
 """
 
@@ -91,7 +86,7 @@ class IslamicAgentEngine:
         """
         q = user_query.lower().strip()
         
-        # 1. Namaz vakitleri (Sivas Gemerek, İzmit, Kadıköy vb.)
+        # 1. Namaz vakitleri (Sivas Gemerek, İzmit, Kadıköy, Muş vb.)
         if any(kw in q for kw in ["namaz vakit", "ezan vakit", "imsak", "sahur", "iftar", "vakitleri", "ezan"]):
             city = self.extract_city(user_query)
             return [{"function": {"name": "calculate_prayer_times", "arguments": {"city": city}}}]
@@ -101,11 +96,15 @@ class IslamicAgentEngine:
             city = self.extract_city(user_query)
             return [{"function": {"name": "calculate_qibla_direction", "arguments": {"city": city}}}]
 
-        # 3. Kur'an Ayet / Sure Arama (Öncelikli: 504. ayet, kaç sure, Nebe suresi, 100. sure vb.)
+        # 3. Fıkıh ve Abdest Soruları (ÖNCELİKLİ Vektör RAG Motoru)
+        if any(kw in q for kw in ["abdest", "gusül", "teheccüd", "sehiv", "bozar mı", "vacip", "farz"]):
+            return [{"function": {"name": "islamic_knowledge_question", "arguments": {"question": user_query}}}]
+
+        # 4. Kur'an Ayet / Sure Arama (504. ayet, kaç sure, Nebe suresi, 100. sure vb.)
         if any(kw in q for kw in ["sure", "suresi", "ayet", "ayeti", "kuran kaç", "meal"]):
             return [{"function": {"name": "search_quran_verse", "arguments": {"query_or_surah": user_query}}}]
 
-        # 4. Esmaül Hüsna (ALLAH'IN 99 İSMİNİN TAMAMI - KELİME SINIRI ILE KESİN EŞLEŞTİRME)
+        # 5. Esmaül Hüsna (ALLAH'IN 99 İSMİNİN TAMAMI - KELİME SINIRI ILE KESİN EŞLEŞTİRME)
         all_99_esma = list(tools.ESMAUL_HUSNA.keys())
         q_norm = (
             q.replace("i̇", "i").replace("ı", "i").replace("â", "a").replace("î", "i").replace("û", "u")
@@ -134,14 +133,14 @@ class IslamicAgentEngine:
             target_name = matched_esma if matched_esma else user_query
             return [{"function": {"name": "get_esmaul_husna", "arguments": {"query": target_name}}}]
 
-        # 5. Zekat hesabı (SADECE zekat veya nisab kelimesi geçiyorsa)
+        # 6. Zekat hesabı (SADECE zekat veya nisab kelimesi geçiyorsa)
         if "zekat" in q or "nisab" in q:
             numbers = [float(n) for n in re.findall(r'\d+', q)]
             gold = numbers[0] if len(numbers) > 0 else 100.0
             cash = numbers[1] if len(numbers) > 1 else 0.0
             return [{"function": {"name": "calculate_zekat", "arguments": {"gold_grams": gold, "cash_try": cash}}}]
 
-        # 6. Veritabanına Soru Kaydetme
+        # 7. Veritabanına Soru Kaydetme
         if any(kw in q for kw in ["kaydet", "ekle", "veritabanına"]):
             topic = "Fıkıh"
             if "namaz" in q: topic = "Namaz"
@@ -149,25 +148,21 @@ class IslamicAgentEngine:
             elif "oruç" in q: topic = "Oruç"
             return [{"function": {"name": "save_inquiry_tool", "arguments": {"topic": topic, "question": user_query, "user_name": "Kullanıcı"}}}]
 
-        # 7. Veritabanı Sorularını Listeleme
+        # 8. Veritabanı Sorularını Listeleme
         if any(kw in q for kw in ["listele", "kayıtlı", "geçmiş sorular", "tüm sorular"]):
             return [{"function": {"name": "get_all_inquiries_tool", "arguments": {}}}]
 
-        # 8. Hadis ve Buhari Doğrulama
+        # 9. Hadis ve Buhari Doğrulama
         if "hadis" in q or "buhari" in q:
             return [{"function": {"name": "verify_hadith_source", "arguments": {"hadith_query": user_query}}}]
 
-        # 9. Ramazan / İslami Takvim
+        # 10. Ramazan / İslami Takvim
         if "ramazan" in q or "bayram" in q or "hicri" in q:
             return [{"function": {"name": "find_islamic_event", "arguments": {"event_name": "ramazan"}}}]
 
-        # 10. Döviz / Dolar / Güncel Haber / Web Araması
+        # 11. Döviz / Dolar / Güncel Haber / Web Araması
         if any(kw in q for kw in ["dolar", "euro", "güncel", "haber", "duyuru", "hac", "umre", "diyanet"]):
             return [{"function": {"name": "web_search_tool", "arguments": {"query": user_query}}}]
-
-        # 11. Fıkıh RAG (Teheccüd, Sehiv Secdesi vb.)
-        if any(kw in q for kw in ["sehiv", "teheccüd", "abdest", "bozar mı", "vacip", "farz"]):
-            return [{"function": {"name": "islamic_knowledge_question", "arguments": {"question": user_query}}}]
 
         # 12. Genel Dini Soru Yanıtlama (Web Araması Fallback)
         return [{"function": {"name": "web_search_tool", "arguments": {"query": user_query}}}]
@@ -210,17 +205,17 @@ class IslamicAgentEngine:
                         fn = tools.TOOLS.get(name)
                         output = fn(**arguments) if fn else f"'{name}' aracı bulunamadı."
                         
-                        tool_outputs.append(str(output))
-                        trace_logs.append({
-                            "turn": turn,
-                            "tool_name": name,
-                            "arguments": arguments,
-                            "response": output
-                        })
-                        # Araç çıktısı modele 'tool' rolünde geri iletilir (LLM Synthesis)
-                        messages.append({"role": "tool", "content": str(output)})
+                        str_out = str(output)
+                        if str_out not in tool_outputs:
+                            tool_outputs.append(str_out)
+                            trace_logs.append({
+                                "turn": turn,
+                                "tool_name": name,
+                                "arguments": arguments,
+                                "response": output
+                            })
+                        messages.append({"role": "tool", "content": str_out})
 
-                # Yerel LLM sentezlenmiş içerik üretmediyse doğrudan araç çıktısına düş
                 if not final_answer and tool_outputs:
                     final_answer = "\n\n".join(tool_outputs)
 
@@ -240,15 +235,17 @@ class IslamicAgentEngine:
                 fn = tools.TOOLS.get(name)
                 output = fn(**arguments) if fn else f"'{name}' aracı bulunamadı."
 
-                tool_outputs.append(str(output))
-                trace_logs.append({
-                    "turn": 1,
-                    "tool_name": name,
-                    "arguments": arguments,
-                    "response": output
-                })
+                str_out = str(output)
+                if str_out not in tool_outputs:
+                    tool_outputs.append(str_out)
+                    trace_logs.append({
+                        "turn": 1,
+                        "tool_name": name,
+                        "arguments": arguments,
+                        "response": output
+                    })
                 messages.append({"role": "assistant", "content": f"[Tool Call: {name}]"})
-                messages.append({"role": "tool", "content": str(output)})
+                messages.append({"role": "tool", "content": str_out})
             
             final_answer = "\n\n".join(tool_outputs)
         else:
@@ -267,5 +264,10 @@ class IslamicAgentEngine:
 
 if __name__ == "__main__":
     engine = IslamicAgentEngine()
-    ans, logs, _ = engine.run("İstanbul ezan vakitleri")
-    print("ENGINE SYNTHESIS RESULT:\n", ans)
+    ans1, _, _ = engine.run("abdest nedir")
+    print("=== ABDEST NEDİR SIRALAMASI ===")
+    print(ans1)
+    
+    ans2, _, _ = engine.run("abdest nasıl alınır?")
+    print("\n=== ABDEST NASIL ALINIR SIRALAMASI ===")
+    print(ans2)
