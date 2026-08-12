@@ -1,0 +1,35 @@
+# ==============================================================================
+# İSLÂMİ DENETÇİ ASİSTAN - DOCKER COMPOSE ORCHESTRATION (DOCKER-COMPOSE.YML)
+# ==============================================================================
+# Bu dosya, tek bir komutla (`docker-compose up`) hem Ollama LLM servisini
+# hem de Python Gradio Web UI uygulamasını ayağa kaldırır.
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # 1. Yerel Ollama Yapay Zeka Servisi
+  ollama:
+    image: ollama/ollama:latest
+    container_name: islami_asistan_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_storage:/root/.ollama
+    restart: always
+
+  # 2. İslami Denetçi Asistan Web Uygulaması (Python + Gradio UI)
+  web_app:
+    build: .
+    container_name: islami_asistan_web
+    ports:
+      - "7860:7860"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - CHAT_MODEL=qwen2.5:3b
+    depends_on:
+      - ollama
+    restart: always
+
+volumes:
+  ollama_storage:

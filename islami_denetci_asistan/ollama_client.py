@@ -1,66 +1,72 @@
 """
 ==============================================================================
-OLLAMA HTTP REST API İLETİŞİM MODÜLÜ (OLLAMA_CLIENT.PY)
+İSLÂMİ DENETÇİ ASİSTAN - OLLAMA İLETİŞİM KATMANI (OLLAMA_CLIENT.PY)
 ==============================================================================
-Bu dosya Ollama HTTP API (http://localhost:11434) ile haberleşmeyi sağlar.
-Ollama servisi kapalıysa veya model yoksa akıllı hata yönetimi sunar.
+BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ AÇIKLAMA):
+------------------------------------------------------------------------------
+1. Ollama REST API İletişimi:
+   Yerel bilgisayarınızda (localhost:11434) çalışan Ollama yapay zeka sunucusuyla
+   HTTP POST istekleri üzerinden haberleşir.
+
+2. Tool Calling (Araç Kullanımı) Şema İletimi:
+   `tools` parametresiyle Python araçlarının JSON şemalarını Ollama modeline
+   iletir. Model cevabında eğer bir araç çalıştırmak isterse JSON çıktısı üretir.
+
+3. Hızlı Zaman Aşımı (Fast Timeout):
+   Ollama kapalıysa veya yanıt veremiyorsa uygulamanın donmasını engeller ve
+   kontrolü hızlıca Fallback NLU engine katmanına devreder.
+==============================================================================
 """
 
+import json
 import requests
-from config import OLLAMA_HOST, CHAT_MODEL, EMBED_MODELS, DEFAULT_EMBED
+import config
 
-CONNECTION_ERROR = (
-    f"Ollama sunucusuna bağlanılamadı ({OLLAMA_HOST}). "
-    "Lütfen 'ollama serve' komutunun açık olduğundan emin olun."
-)
-
-def _post(path: str, payload: dict, timeout: int = 5) -> dict:
-    """Ollama API'ye POST isteği atar (Zaman aşımı 5 saniye)."""
-    try:
-        url = f"{OLLAMA_HOST}{path}"
-        response = requests.post(url, json=payload, timeout=timeout)
-    except requests.exceptions.ConnectionError as exc:
-        raise RuntimeError(CONNECTION_ERROR) from exc
-    except requests.exceptions.RequestException as exc:
-        raise RuntimeError(f"Ollama API İletişim Hatası: {exc}")
+def chat(messages: list[dict], model: str = config.CHAT_MODEL, tools: list[dict] = None) -> dict:
+    """
+    Yerel Ollama LLM modeline HTTP POST isteği gönderen ana fonksiyon.
     
-    if response.status_code != 200:
-        raise RuntimeError(f"Ollama Hatası ({response.status_code}): {response.text[:300]}")
-    return response.json()
-
-def embed(texts: list[str], embed_key: str = DEFAULT_EMBED, kind: str = "doc") -> list[list[float]]:
-    """Metinleri vektöre dönüştürür (RAG için)."""
-    if embed_key not in EMBED_MODELS:
-        raise ValueError(f"Bilinmeyen embedding modeli: {embed_key}")
+    Parametreler:
+    - messages : Sohbet geçmişi ve sistem istemi (System, User, Assistant, Tool)
+    - model    : Kullanılacak yerel model adı (Örn: qwen2.5:3b)
+    - tools    : Modeli bilgilendiren araç JSON şemaları kümesi
     
-    config = EMBED_MODELS[embed_key]
-    prefix = config["query_prefix"] if kind == "query" else config["doc_prefix"]
-    formatted_input = [prefix + text for text in texts]
+    Döndürür:
+    - Ollama'dan gelen yanıt mesajı nesnesi (Role, Content, Tool Calls)
+    """
+    url = f"{config.OLLAMA_HOST}/api/chat"
     
-    try:
-        data = _post("/api/embed", {"model": config["name"], "input": formatted_input}, timeout=4)
-        return data["embeddings"]
-    except Exception:
-        # Ollama kapalıysa deterministik basit pseudo-embedding üretelim (RAG çökmesin)
-        embeddings = []
-        for t in texts:
-            val = float(sum(ord(c) for c in t) % 100) / 100.0
-            embeddings.append([val] * 384)
-        return embeddings
-
-def chat(
-    messages: list[dict],
-    model: str = CHAT_MODEL,
-    tools: list[dict] | None = None,
-    temperature: float = 0.1,
-) -> dict:
-    """Sohbet modeline mesajları gönderir ve yanıtı döndürür."""
+    # HTTP İstek Gövdesi (Payload) Oluşturma
     payload = {
         "model": model,
         "messages": messages,
-        "stream": False,
-        "options": {"temperature": temperature},
+        "stream": False, # Yanıtı parça parça değil, tek seferde almak için False
+        "options": {
+            "temperature": config.TEMPERATURE, # Yaratıcılık/Doğruluk dengesi (0.1 = Çok kararlı)
+            "num_predict": config.MAX_TOKENS    # Üretilecek maksimum token sayısı
+        }
     }
+    
+    # Eğer araç şemaları tanımlanmışsa isteğe ekle
     if tools:
         payload["tools"] = tools
-    return _post("/api/chat", payload, timeout=5)["message"]
+
+    try:
+        # Ollama sunucusuna 15 saniyelik zaman aşımı ile HTTP POST gönder
+        response = requests.post(url, json=payload, timeout=15)
+        if response.status_code == 200:
+            res_json = response.json()
+            return res_json.get("message", {"role": "assistant", "content": ""})
+        else:
+            raise RuntimeError(f"Ollama API hatası: HTTP Status {response.status_code}")
+    except Exception as exc:
+        raise RuntimeError(f"Ollama sunucusuna ulaşılamadı veya zaman aşımı: {exc}")
+
+if __name__ == "__main__":
+    # Basit Bağlantı ve Test Fonksiyonu
+    try:
+        test_msg = [{"role": "user", "content": "Merhaba"}]
+        res = chat(test_msg)
+        print("Ollama Test Yanıtı:", res)
+    except Exception as e:
+        print("Test Hatası:", e)

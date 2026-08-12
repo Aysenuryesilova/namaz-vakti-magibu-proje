@@ -4,7 +4,8 @@
 ==============================================================================
 Bu dosya:
 1. Türkiye'nin 81 İli ve TÜM 922 İLÇESİ (Sivas Gemerek, İzmit, Kadıköy, Şarkışla, Hasköy, Edremit, Of vb.)
-2. Allah'ın 99 İSMİNİN TAMAMI (Esmaül Hüsna: El-Fettah, Er-Rahman, Er-Rahim, El-Melik vb.)
+2. Allah'ın 99 İSMİNİN TAMAMI (Esmaül Hüsna: El-Fettah, Er-Rahman, Er-Rahim, El-Melik, Kuddus, Es-Selam vb.)
+   - 'elmelik', 'melik', 'er-rahman', 'rahman', 'es-selam', 'selam' gibi tüm prefix varyasyonları desteklenir.
 3. Kur'an 114 SURE VE 6236 AYETİN TAMAMI (Sure numaraları, ayet mealleri, 504. genel ayet sırası)
 4. Zekat & Nisab Hesap Makinesi (Fıkhi Kod Yürütme)
 5. Canlı İnternet Araması (DuckDuckGo / Web Araması)
@@ -199,7 +200,7 @@ QURAN_SURAH_DATABASE = {
 }
 
 # ==============================================================================
-# ESMAÜL HÜSNA (ALLAH'IN 99 İSMİ VE TÜRKÇE ANLAMLARI)
+# ESMAÜL HÜSNA (ALLAH'IN 99 İSMİ VE TÜRKÇE ANLAMLARI - EKSİKSİZ TAM LİSTE)
 # ==============================================================================
 ESMAUL_HUSNA = {
     "allah": "Eşi benzeri olmayan, tek ilah olan, tüm övgülere layık en yüce isim.",
@@ -276,7 +277,7 @@ ESMAUL_HUSNA = {
     "muahhir": "Dilediğini geriye bırakan.",
     "evvel": "Varlığının başlangıcı olmayan, ebedi ilk.",
     "ahir": "Varlığının sonu olmayan, ebedi son.",
-    "zahir": "Varlığı açık ve ashikar olan.",
+    "zahir": "Varlığı açık ve aşikar olan.",
     "batin": "Zatı gizli, duyu organlarıyla algılanamayan.",
     "vali": "Kainatı ve gerçekleşen tüm olayları yöneten.",
     "mutaali": "Aklın alabileceği her şeyden yüce olan.",
@@ -320,7 +321,6 @@ def get_coordinates_by_city(city_name: str) -> tuple[float, float, str]:
     )
     tokens = [t.strip("?,.!") for t in clean_search.split() if len(t.strip("?,.!")) >= 2]
 
-    # 1. Aşama: Canlı Geocoding API ile İlçe/İl Araması (Örn: Gemerek, Sivas Gemerek, İzmit)
     search_terms = [clean_search] + list(reversed(tokens))
     for term in search_terms:
         if not term:
@@ -342,7 +342,6 @@ def get_coordinates_by_city(city_name: str) -> tuple[float, float, str]:
         except Exception:
             pass
 
-    # 2. Aşama: 81 İl Sabit Haritası Kontrolü
     for prov_key, (lat, lon, label) in TURKEY_PROVINCES.items():
         prov_clean = prov_key.replace("i̇", "i").replace("ı", "i").replace("ğ", "g").replace("ü", "u").replace("ş", "s").replace("ö", "o").replace("ç", "c")
         if prov_clean in clean_search:
@@ -546,7 +545,6 @@ def search_quran_verse(query_or_surah: str) -> str:
     q_raw = query_or_surah.strip()
     q_clean = q_raw.lower().replace("i̇", "i")
     
-    # 1. Genel Kur'an İstatistikleri Sorusuna Yanıt
     if "kaç sure" in q_clean or "sure sayısı" in q_clean or "kuran kaç" in q_clean:
         return (
             "📖 **Kur'an-ı Kerim Genel Bilgileri (Diyanet Esasları)**:\n"
@@ -557,7 +555,6 @@ def search_quran_verse(query_or_surah: str) -> str:
             "   • En Kısa Sure       : Kevser Suresi (3 Ayet)"
         )
 
-    # 2. Genel Ayet Sırası Sorgusu (Örn: "504. ayet", "504. ayet nedir?")
     cumulative_verse_match = re.search(r'\b(\d{1,4})\.\s*ayet\b', q_clean)
     if cumulative_verse_match:
         verse_num = int(cumulative_verse_match.group(1))
@@ -579,7 +576,6 @@ def search_quran_verse(query_or_surah: str) -> str:
         except Exception:
             pass
 
-    # 3. Sure Numarasına Göre Arama (Örn: "100", "100. sure", "78", "78. sure")
     surah_num_match = re.search(r'\b(1[0-1][0-4]|[1-9]?[0-9])\b', q_raw)
     if surah_num_match and ("sure" in q_clean or q_raw.replace(".", "").isdigit()):
         s_num = int(surah_num_match.group(1))
@@ -594,7 +590,6 @@ def search_quran_verse(query_or_surah: str) -> str:
                 f"   • Nüzul Yeri  : {info['nuzul']} Dönemi"
             )
 
-    # 4. İsime Göre Sure Arama (Örn: "nebe", "yasin", "fatiha", "bakara", "adiyat")
     for s_num, info in QURAN_SURAH_DATABASE.items():
         s_name_clean = info['name'].lower().replace("i̇", "i").replace("â", "a").replace("î", "i").replace("û", "u").replace("'", "")
         if s_name_clean in q_clean or info['name'].lower() in q_clean:
@@ -606,23 +601,13 @@ def search_quran_verse(query_or_surah: str) -> str:
                 f"   • Nüzul Yeri  : {info['nuzul']} Dönemi"
             )
 
-    # 5. Diyanet Meal API'sinden Canlı Metin Araması
     try:
-        url = "https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/tur-diyanetisleri.json"
-        res = requests.get(url, headers=HEADERS, timeout=8)
-        if res.status_code == 200:
-            quran_data = res.json().get("quran", [])
-            matched = []
-            for item in quran_data:
-                if q_clean in item.get("text", "").lower():
-                    matched.append(item)
-                    if len(matched) >= 2:
-                        break
-            if matched:
-                out = [f"📖 **Kur'an-ı Kerim Diyanet Meali Araması ('{query_or_surah}' için)**:"]
-                for i, m in enumerate(matched, start=1):
-                    out.append(f"\n[{i}] Sure: {m.get('chapter')}, Ayet: {m.get('verse')}\n    Meal: \"{m.get('text')}\"")
-                return "\n".join(out)
+        rag_hits = islamic_rag.search_rag(query_or_surah)
+        if rag_hits:
+            res_lines = [f"📖 **Vektör RAG Arama Sonucu ('{query_or_surah}' için)**:"]
+            for h in rag_hits:
+                res_lines.append(f"\n• [{h['topic']}] {h['text']}\n  🔗 Kaynak: {h['kaynak']}")
+            return "\n".join(res_lines)
     except Exception:
         pass
 
@@ -633,31 +618,15 @@ def search_quran_verse(query_or_surah: str) -> str:
 
 
 # ==============================================================================
-# ARAÇ 8: Teheccüd, Sehiv Secdesi, İbadet ve Fıkıh Soruları (RAG)
+# ARAÇ 8: Teheccüd, Sehiv Secdesi, İbadet ve Fıkıh Soruları (Vektör RAG)
 # ==============================================================================
 def islamic_knowledge_question(question: str) -> str:
     """Teheccüd namazı, sehiv secdesi, kuşluk namazı, abdest ve fıkıh sorularına cevap verir."""
-    q_lower = question.lower()
-    
-    if "teheccüd" in q_lower or "teheccud" in q_lower:
-        return (
-            "📖 **Teheccüd Namazı Rehberi (Diyanet İlmihali)**:\n"
-            "• Nedir?: Yatsı namazından sonra gece uykudan uyanıp İmsak vaktine kadar kılınan çok faziletli nafile namazdır.\n"
-            "• Ne Zaman Kılınır?: Gece yarısından sonra başlayıp İmsak vaktine kadar kılınabilir."
-        )
-        
-    if "sehiv" in q_lower or "secdes" in q_lower:
-        return (
-            "📖 **Sehiv Secdesi Rehberi (Diyanet İlmihali)**:\n"
-            "• Nedir?: Namazda unutarak bir vacibin terk edilmesi veya geciktirilmesi durumunda yapılan düzeltme secdesidir.\n"
-            "• Ne Zaman Yapılır?: Namazın son oturuşunda Ettehiyyatü okunduktan sonra selam verilip iki secde yapılır."
-        )
-
     try:
         hits = islamic_rag.search_rag(question)
         if hits:
-            context = "\n".join([f"• {h['text']} (Kaynak: {h['kaynak']})" for h in hits])
-            return f"📖 **Diyanet ve Fıkıh Rehberinden Bulunan Bilgi**:\n{context}"
+            context = "\n".join([f"• {h['text']}\n  🔗 Kaynak: {h['kaynak']}" for h in hits])
+            return f"📖 **Diyanet İlmihali Vektör Bilgi Deposu Yanıtı**:\n\n{context}"
     except Exception:
         pass
 
@@ -665,30 +634,41 @@ def islamic_knowledge_question(question: str) -> str:
 
 
 # ==============================================================================
-# ARAÇ 9: Esmaül Hüsna (Allah'ın 99 İsmi ve Türkçe Anlamları)
+# ARAÇ 9: Esmaül Hüsna (ALLAH'IN 99 İSMİNİN TAMAMI - KUSURSUZ PREFIX TEMİZLEME)
 # ==============================================================================
 def get_esmaul_husna(query: str = "") -> str:
-    """Allah'ın 99 İsmini (El-Fettah, Er-Rahman, Er-Rahim vb.) ve Türkçe anlamlarını getirir."""
+    """
+    Allah'ın 99 İsmini (El-Fettah, Er-Rahman, El-Melik, Melik, Fettah, Es-Selam, Selam vb.) ve Türkçe anlamlarını getirir.
+    Kullanıcı 'elmelik', 'melik', 'er-rahman', 'rahman', 'es-selam', 'selam' gibi varyasyonlar
+    yazdığında prefixleri (el-, er-, es-, ez-, ef-, el, er, es...) esnekçe temizleyip %100 eşleştirir.
+    """
     try:
+        q_raw = query.lower().strip()
+        
+        # 1. Aşama: Temizleme ve Prefix Normalizasyonu
         q_clean = (
-            query.lower().strip()
-            .replace("el-", "")
-            .replace("er-", "")
-            .replace("es-", "")
-            .replace("ez-", "")
-            .replace("ef-", "")
-            .replace("anlamı", "")
-            .replace("ne demek", "")
-            .replace("nedir", "")
+            q_raw
+            .replace("i̇", "i").replace("ı", "i").replace("â", "a").replace("î", "i").replace("û", "u")
+            .replace("anlamı", "").replace("ne demek", "").replace("nedir", "").replace("isminin", "").replace("ismi", "").replace("nedir", "")
             .strip()
         )
         
+        # Prefix temizleme döngüsü (Örn: 'es-selam' -> 'selam', 'elmelik' -> 'melik')
+        prefixes = ["el-", "er-", "es-", "ez-", "ef-", "et-", "ed-", "el", "er", "es", "ez", "ef", "et", "ed"]
+        for p in prefixes:
+            if q_clean.startswith(p) and len(q_clean) > len(p) + 2:
+                candidate = q_clean[len(p):].strip("- ")
+                if candidate in ESMAUL_HUSNA:
+                    q_clean = candidate
+                    break
+
+        # 2. Aşama: 99 İsim İçinde Doğrudan / Esnek Eşleştirme
         for name_key, meaning in ESMAUL_HUSNA.items():
-            if name_key in q_clean or q_clean in name_key:
+            if name_key == q_clean or name_key in q_clean or q_clean in name_key:
                 formatted_name = "El-" + name_key.title()
                 return f"✨ **Esmaül Hüsna**: '{formatted_name}'\n   • Türkçe Anlamı: {meaning}"
                 
-        return "✨ Esmaül Hüsna: Allah'ın 99 yüce ismi ve anlamları veritabanında mevcuttur."
+        return f"✨ **Esmaül Hüsna**: Allah'ın 99 yüce ismi ve anlamları veritabanında mevcuttur ('{query}' incelenmiştir)."
     except Exception as exc:
         return f"Esmaül Hüsna hatası: {exc}"
 
@@ -848,7 +828,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "web_search_tool",
-            "description": "Güncel İslami haberler, Diyanet fetvaları ve internet araştırması yapar.",
+            "description": "Güncel İslami haberler, Diyanet fetvaları ve genel web araması yapma aracı.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -914,11 +894,11 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "get_esmaul_husna",
-            "description": "Allah'ın 99 İsmini (El-Fettah, Er-Rahman, Er-Rahim vb.) ve Türkçe anlamlarını getirir.",
+            "description": "Allah'ın 99 İsmini (El-Melik, Melik, Er-Rahman, Rahman, El-Fettah, Fettah, Es-Selam, Selam vb.) ve Türkçe anlamlarını getirir.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Allah'ın ismi (Örn: Fettah, Rahman, Rahim)"},
+                    "query": {"type": "string", "description": "Allah'ın ismi (Örn: elmelik, melik, er-rahman, rahman, es-selam, selam, fettah)"},
                 },
                 "required": ["query"],
             },

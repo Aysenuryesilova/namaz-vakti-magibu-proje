@@ -1,140 +1,100 @@
 """
 ==============================================================================
-İSLÂMİ UYGULAMA DOĞRULUK DENETÇİSİ GRADIO WEB ARAYÜZÜ (APP.PY)
+İSLÂMİ DENETÇİ ASİSTAN - GRADIO WEB KULLANICI ARAYÜZÜ (APP.PY)
 ==============================================================================
-Bu dosya:
-Hugging Face Spaces ve Yerel Kullanım için 3 Sekmeli Modern Gradio Arayüzü sunar.
-- Sekme 1: Sohbet Arayüzü ve Örnek Hızlı Sorular
-- Sekme 2: Tool Calling & Jinja2 Trace Logları (Ödev Kontrolü İçin)
-- Sekme 3: SQLite Veritabanı ve RAG Bilgi Bankası Görüntüleyici
+BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ AÇIKLAMA):
+------------------------------------------------------------------------------
+1. Gradio Web UI (Web Kullanıcı Arayüzü):
+   Kullanıcıların web tarayıcısı üzerinden (http://localhost:7860) asistanla
+   etkileşime girmesini sağlayan görsel kullanıcı arayüzüdür.
+
+2. 3 Sekmeli Profesyonel Görsel Düzen:
+   - Sekme 1: Canlı Sohbet ve Bot (Chatbot Interface)
+   - Sekme 2: Araç Çağrı Logları & Şeffaf Trace İzleyici (Trace Logs Inspector)
+   - Sekme 3: SQLite Veritabanı Kayıt İnceleyici (Database Inspector Table)
+==============================================================================
 """
 
+import sys
 import gradio as gr
 from agent_engine import IslamicAgentEngine
 from database import get_all_inquiries
 
+# Agent motoru tekil örneği
 engine = IslamicAgentEngine()
 
-def get_db_records_formatted() -> str:
-    """Veritabanındaki soru ve fetva kayıtlarını metin olarak döndürür."""
+def respond(user_message, chat_history):
+    """
+    Gradio Sohbet Fonksiyonu:
+    Kullanıcı mesajını alır, Agent Engine'i çalıştırır ve yanıtı web sohbetine ekler.
+    """
+    if not user_message.strip():
+        return "", chat_history, "Henüz araç çağrılmadı."
+
+    # Agent Engine çalıştırma
+    bot_response, trace_logs, _ = engine.run(user_message)
+    
+    # Sohbet geçmişini güncelle (Gradio chatbot formatı)
+    chat_history.append((user_message, bot_response))
+    
+    # Log ekranı metnini hazırlama
+    logs_str = ""
+    for log in trace_logs:
+        logs_str += f"🔧 Tur #{log['turn']}: Araç '{log['tool_name']}' Çalıştırıldı\n"
+        logs_str += f"   • Parametreler: {log['arguments']}\n"
+        logs_str += f"   • Yanıt Çıktısı: {str(log['response'])[:200]}...\n\n"
+        
+    if not logs_str:
+        logs_str = "ℹ️ Bu yanıt doğrudan bilgi bankasından veya NLU motorundan üretildi."
+
+    return "", chat_history, logs_str
+
+def refresh_db():
+    """SQLite veritabanı kayıtlarını okuyup tablo halinde döndürür."""
     res = get_all_inquiries()
     if res.get("status") == "success":
         records = res.get("records", [])
-        if not records:
-            return "📋 Veritabanında (user_inquiries) henüz kayıtlı bir soru bulunmamaktadır."
-        
-        lines = []
-        for r in records:
-            lines.append(f"• ID #{r['id']} | Konu: [{r['topic']}] | Kişi: {r['user_name']} ({r['created_at']})\n  Soru: {r['question']}\n")
-        return f"📋 SQLite Veritabanında Saklanan Sorular (Toplam: {len(records)} Kayıt):\n\n" + "\n".join(lines)
-    return "⚠️ Veritabanı okuma hatası oluştu."
+        return [[r["id"], r["topic"], r["user_name"], r["question"], r["created_at"]] for r in records]
+    return []
 
-def process_query(user_message, history):
-    """Kullanıcı mesajını işler, sohbet cevabını, trace loglarını ve DB durumunu döndürür."""
-    if not user_message or not user_message.strip():
-        return "", history, "Lütfen geçerli bir soru girin.", get_db_records_formatted()
-
-    final_answer, trace_logs, rendered_prompt = engine.run(user_message)
-
-    # Trace Log Formatlama
-    logs_formatted = f"=== JINJA2 / SYSTEM PROMPT ÇIKTISI ===\n{rendered_prompt}\n\n"
-    logs_formatted += f"=== TOOL CALLING TRACE LOGS (Ödev Adımları) ===\n"
-
-    if trace_logs:
-        for log in trace_logs:
-            logs_formatted += (
-                f"[Turn {log['turn']}]\n"
-                f"• Çağrılan Araç : {log['tool_name']}\n"
-                f"• Parametreler   : {log['arguments']}\n"
-                f"• Yanıt/Sonuç    : {log['response']}\n\n"
-            )
-    else:
-        logs_formatted += "Bu sorgu için doğrudan yanıt üretilmiştir (Harici araç tetiklenmedi).\n"
-
-    new_history = history + [(user_message, final_answer)]
-    return "", new_history, logs_formatted, get_db_records_formatted()
-
-# Gradio Arayüzü Tasarımı
-custom_css = """
-footer {visibility: hidden;}
-.trace-box textarea {font-family: monospace; font-size: 13px; background-color: #1e1e2e; color: #a6e3a1;}
-"""
-
-with gr.Blocks(title="🕌 İslami Denetçi & Namaz Vakti Asistanı", css=custom_css, theme=gr.themes.Soft()) as demo:
+# ==============================================================================
+# GRADIO BLOCKS ARAYÜZ TASARIMI
+# ==============================================================================
+with gr.Blocks(title="🕌 İslami Denetçi Asistanı", theme=gr.themes.Soft()) as demo:
     gr.Markdown(
         """
-        # 🕌 İslami Uygulama Doğruluk & Kaynak Denetçisi (Ezan Vakti Agent)
-        ### Yerel (Local) LLM + Tool Calling (Araç Kullanımı) + RAG + SQLite Veritabanı + Canlı Web Araması
-        *Diyanet namaz vakitleri, zekat hesabı, Kur'an mealleri, hadisler, fıkıh rehberi ve canlı internet araştırması*
+        # 🕌 İslami Uygulama Doğruluk ve Kaynak Denetçisi
+        ### Local LLM + Tool Calling + Vector RAG + SQLite DB + DuckDuckGo Web Search
         """
     )
-
+    
     with gr.Tabs():
-        # SEKME 1: SOHBET
-        with gr.TabItem("💬 İslami Denetçi Sohbet Arayüzü"):
-            chatbot = gr.Chatbot(height=450, show_copy_button=True)
+        # Sekme 1: Canlı Sohbet Arayüzü
+        with gr.TabItem("💬 Canlı Sohbet"):
+            chatbot = gr.Chatbot(height=450, label="İslami Denetçi Asistanı Sohbeti")
             with gr.Row():
-                msg_input = gr.Textbox(
-                    placeholder="Sorunuzu buraya yazın (Örn: 'İstanbul namaz vakitleri', '100 gr altın 50 bin TL zekat hesabı')...",
-                    show_label=False,
-                    scale=8
-                )
-                submit_btn = gr.Button("Gönder 🚀", variant="primary", scale=2)
+                msg_input = gr.Textbox(placeholder="Mesajınızı yazın (Örn: 'İzmit ezan vakitleri', '504. ayet nedir?')...", scale=8)
+                submit_btn = gr.Button("Gönder", variant="primary", scale=2)
+                clear_btn = gr.Button("Temizle", scale=1)
+                
+            trace_output = gr.Textbox(label="🔍 En Son Araç Çağrı Logu (Trace Log)", lines=5, interactive=False)
+            
+            # Olay Bağlantıları (Event Bindings)
+            msg_input.submit(respond, [msg_input, chatbot], [msg_input, chatbot, trace_output])
+            submit_btn.click(respond, [msg_input, chatbot], [msg_input, chatbot, trace_output])
+            clear_btn.click(lambda: ([], ""), None, [chatbot, trace_output])
 
-            gr.Markdown("### 💡 Örnek Hızlı Test Soruları")
-            gr.Examples(
-                examples=[
-                    ["İstanbul için bugün namaz vakitleri nelerdir?"],
-                    ["100 gram altınım ve 50.000 TL nakdim var, zekat düşer mi?"],
-                    ["Teheccüd namazı ne zaman ve nasıl kılınır?"],
-                    ["Bu soruyu veritabanına kaydet: Sehiv secdesi hangi durumlarda vacip olur?"],
-                    ["Veritabanındaki tüm kayıtlı soruları listele."],
-                    ["2026 Diyanet Ramazan ne zaman başlıyor?"],
-                    ["Ankara için kıble açısı kaç derecedir?"],
-                    ["'Allah' isminin Esmaül Hüsna anlamı nedir?"],
-                ],
-                inputs=msg_input
+        # Sekme 2: SQLite Veritabanı İnceleyici
+        with gr.TabItem("📋 SQLite Veritabanı İnceleyici"):
+            gr.Markdown("### SQLite Veritabanındaki Kayıtlı Fetva ve Sorular")
+            refresh_btn = gr.Button("Verileri Yenile", variant="secondary")
+            db_table = gr.Dataframe(
+                headers=["ID", "Konu", "Kullanıcı", "Soru", "Tarih"],
+                datatype=["number", "str", "str", "str", "str"],
+                value=refresh_db()
             )
-
-        # SEKME 2: TRACE LOGLARI
-        with gr.TabItem("⚙️ Tool Call & Jinja2 Trace Logları"):
-            gr.Markdown("### 🔍 Arka Plan Çalışma Adımları (Tool Calling & System Prompt Output)")
-            trace_output = gr.Textbox(
-                label="Trace Logları ve Araç Parametreleri",
-                interactive=False,
-                lines=20,
-                elem_classes=["trace-box"]
-            )
-
-        # SEKME 3: VERİTABANI GÖRÜNTÜLEYİCİ
-        with gr.TabItem("🗄️ SQLite Veritabanı & RAG Kayıtları"):
-            gr.Markdown("### 📋 Veritabanında (user_inquiries) Saklanan Soru ve Fetva Kayıtları")
-            db_output = gr.Textbox(
-                label="Veritabanı İçeriği",
-                value=get_db_records_formatted(),
-                interactive=False,
-                lines=15
-            )
-            refresh_btn = gr.Button("Veritabanını Yenile 🔄")
-
-    # Event İşleyiciler
-    submit_btn.click(
-        fn=process_query,
-        inputs=[msg_input, chatbot],
-        outputs=[msg_input, chatbot, trace_output, db_output]
-    )
-
-    msg_input.submit(
-        fn=process_query,
-        inputs=[msg_input, chatbot],
-        outputs=[msg_input, chatbot, trace_output, db_output]
-    )
-
-    refresh_btn.click(
-        fn=get_db_records_formatted,
-        inputs=[],
-        outputs=[db_output]
-    )
+            refresh_btn.click(refresh_db, None, db_table)
 
 if __name__ == "__main__":
-    demo.launch(server_name="127.0.0.1", server_port=7860, share=False)
+    # Gradio Web Sunucusunu 7860 portunda başlat
+    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)

@@ -2,10 +2,24 @@
 ==============================================================================
 İSLÂMİ DENETÇİ ASİSTAN AGENT MOTORU (AGENT_ENGINE.PY)
 ==============================================================================
-Bu modül:
-1. Ollama LLM + Tool Calling (Araç Kullanımı) ReAct Döngüsünü yönetir.
-2. Araç sonuçlarını doğrudan asistana aktarır ve halüsinasyon görmeden net cevaplar verir.
-3. NLU motoru ile soru tiplerini ayrıştırıp dış veritabanı ve API araçlarını çağırır.
+BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ AÇIKLAMA):
+------------------------------------------------------------------------------
+1. Agentic Workflow & ReAct Döngüsü:
+   Asistan sadece bir metin üretici değil; kullanıcının sorusunu analiz eden,
+   hangi aracı (tool) çağıracağına karar veren ve araç çıktısını harmanlayıp
+   kullanıcıya sunan otonom bir ajandır (Agent).
+
+2. Sohbet Geçmişi ve Oturum Belleği (Conversational State & Memory):
+   `conversation_history` değişkeni kullanıcının sohbet boyunca sorduğu önceki
+   soruları ve konumları hatırlar (Örn: Kullanıcı önce 'İstanbul namaz vakitleri'
+   deyip ardından 'peki kıble açısı nedir?' sorduğunda İstanbul şehrini unutmaz).
+
+3. Akıllı NLU (Doğal Dil Anlama) & Fallback Engine:
+   Modelin çevrimdışı olduğu durumlarda dahi kullanıcıyı cevapsız bırakmaz,
+   soru tipini (Namaz, Kıble, Zekat, Ayet, Esma, Hadis) tespit edip doğru
+   Python aracını otomatik yürütür. Allah'ın 99 isminin tamamı (elmelik, melik,
+   er-rahman, rahman, es-selam, selam vb.) esnek olarak algılanır.
+==============================================================================
 """
 
 import sys
@@ -19,45 +33,65 @@ from database import init_database
 
 class IslamicAgentEngine:
     def __init__(self):
+        """
+        Agent Engine Başlatıcı:
+        - Veritabanı bağlantılarını ilkler (init_database).
+        - Yerel Ollama sunucu durumunu kontrol eder.
+        - Çoklu konuşma turları için sohbet belleğini (conversation_history) başlatır.
+        """
         init_database()
         self.ollama_available = self.check_ollama_status()
+        self.conversation_history = []  # Sohbet geçmişi belleği (Multi-turn Chat State)
+        self.last_mentioned_city = None # Hatırlanan son konum/şehir bağlamı
 
     def check_ollama_status(self) -> bool:
-        """Ollama sunucusunun çalışıp çalışmadığını anlık kontrol eder (0.1sn)."""
+        """
+        Ollama daemon sunucusunun çalışıp çalışmadığını 0.3 saniyelik hızlı
+        ping (health check) ile kontrol eder. Çevrimdışı ise hemen fallback moduna geçer.
+        """
         try:
             res = requests.get(f"{config.OLLAMA_HOST}/api/tags", timeout=0.3)
             return res.status_code == 200
         except Exception:
             return False
 
+    def clear_memory(self):
+        """Sohbet belleğini ve hatırlanan şehir bağlamını sıfırlar."""
+        self.conversation_history = []
+        self.last_mentioned_city = None
+
     def extract_city(self, text: str) -> str:
-        """Kullanıcı sorgusundan il/ilçe adını ayıklar (Örn: Sivas Gemerek -> Sivas Gemerek, İzmit -> İzmit)."""
-        t_clean = (
-            text.lower()
-            .replace("ezan", "")
-            .replace("namaz", "")
-            .replace("vakti", "")
-            .replace("vakitleri", "")
-            .replace("kıble", "")
-            .replace("kıblem", "")
-            .replace("yönü", "")
-            .replace("yönde", "")
-            .replace("kaç", "")
-            .replace("derecedir", "")
-            .replace("nedir", "")
-            .replace("mevcut", "")
-            .replace("ne", "")
-            .replace("olmalı", "")
-            .replace("nerede", "")
-            .strip()
-        )
-        words = [w.strip("?,.!") for w in t_clean.split() if w.strip("?,.!") not in ["için", "mevcut", "ne", "yönde", "olmalı", "bugün", "güncel", "nerede"]]
+        """
+        Kullanıcı sorgusundan il/ilçe adını ayıklar. Eğer kullanıcı yeni bir şehir
+        belirtmemişse sohbet belleğindeki son konumu (last_mentioned_city) hatırlar!
+        """
+        stop_words = [
+            "ezan", "namaz", "vakti", "vakitleri", "kıble", "kıblem", "yönü", "yönde",
+            "kaç", "derecedir", "derece", "nedir", "mevcut", "ne", "olmalı", "nerede",
+            "peki", "açısı", "açı", "miktarı", "bilgisi", "sonucu", "için", "bugün", "güncel"
+        ]
+        t_clean = text.lower()
+        for sw in stop_words:
+            t_clean = t_clean.replace(sw, "")
+            
+        words = [w.strip("?,.!") for w in t_clean.split() if w.strip("?,.!") and w.strip("?,.!") not in stop_words]
+        
         if words and len(" ".join(words)) >= 2:
-            return " ".join(words).title()
+            extracted = " ".join(words).title()
+            self.last_mentioned_city = extracted # Belleğe kaydet
+            return extracted
+            
+        # Eğer yeni şehir bulunamadıysa sohbet belleğindeki son şehri döndür
+        if self.last_mentioned_city:
+            return self.last_mentioned_city
+            
         return "İstanbul"
 
     def detect_fallback_tool(self, user_query: str) -> list[dict] | None:
-        """Kullanıcı sorgusuna uygun aracı tespit eder."""
+        """
+        Kullanıcının doğal dil sorgusunu NLU ile analiz ederek tetiklenmesi
+        gereken 11 harici araçtan hangisinin çağrılacağını tespit eder.
+        """
         q = user_query.lower().strip()
         
         # 1. Namaz vakitleri (Sivas Gemerek, İzmit, Kadıköy vb.)
@@ -70,12 +104,24 @@ class IslamicAgentEngine:
             city = self.extract_city(user_query)
             return [{"function": {"name": "calculate_qibla_direction", "arguments": {"city": city}}}]
 
-        # 3. Esmaül Hüsna (Fettah, Rahman, Rahim, Allah'ın isimleri vb.)
-        esma_names = ["fettah", "rahman", "rahim", "melik", "kuddus", "selam", "mumin", "muheymin", "aziz", "cebbar", "mutekebbir", "halik", "bari", "musavvir", "gaffar", "kahhar", "vehhab", "rezzak", "alim", "esma"]
-        if any(kw in q for kw in esma_names) or "allah'ın isim" in q or "el-" in q or "er-" in q:
-            # Fettah kelimesini yakalayalım
-            match_name = next((name for name in esma_names if name in q and name != "esma"), "fettah" if "fettah" in q else user_query)
-            return [{"function": {"name": "get_esmaul_husna", "arguments": {"query": match_name}}}]
+        # 3. Esmaül Hüsna (ALLAH'IN 99 İSMİNİN TAMAMI - ESNEK EŞLEŞTİRME)
+        all_99_esma = list(tools.ESMAUL_HUSNA.keys())
+        q_norm = (
+            q.replace("i̇", "i").replace("ı", "i").replace("â", "a").replace("î", "i").replace("û", "u")
+            .replace("anlamı", "").replace("ne demek", "").replace("nedir", "").replace("isminin", "").replace("ismi", "")
+            .strip()
+        )
+        for p in ["el-", "er-", "es-", "ez-", "ef-", "et-", "ed-", "el", "er", "es", "ez", "ef", "et", "ed"]:
+            if q_norm.startswith(p) and len(q_norm) > len(p) + 2:
+                candidate = q_norm[len(p):].strip("- ")
+                if candidate in all_99_esma:
+                    q_norm = candidate
+                    break
+
+        matched_esma = next((name for name in all_99_esma if name == q_norm or name in q or name in q_norm), None)
+        if matched_esma or "esma" in q or "allah'ın isim" in q or "selam" in q:
+            target_name = matched_esma if matched_esma else user_query
+            return [{"function": {"name": "get_esmaul_husna", "arguments": {"query": target_name}}}]
 
         # 4. Kur'an Ayet / Sure Arama (504. ayet, Nebe suresi, 100. sure, sure meali vb.)
         if any(kw in q for kw in ["sure", "suresi", "ayet", "ayeti", "kuran kaç", "meal"]):
@@ -116,17 +162,19 @@ class IslamicAgentEngine:
         if any(kw in q for kw in ["sehiv", "teheccüd", "abdest", "bozar mı", "vacip", "farz"]):
             return [{"function": {"name": "islamic_knowledge_question", "arguments": {"question": user_query}}}]
 
-        return None
+        # 12. Genel Dini Soru Yanıtlama (Web Araması Fallback)
+        return [{"function": {"name": "web_search_tool", "arguments": {"query": user_query}}}]
 
     def run(self, user_query: str) -> tuple[str, list[dict], str]:
         """
-        Kullanıcı mesajını işler, araçları çalıştırır, trace logları üretir ve nihai yanıtı döndürür.
-        Returns: (final_answer, trace_logs, rendered_prompt)
+        Kullanıcı mesajını işleyen ana fonksiyon:
+        1. Mesajı sohbet geçmişi (conversation_history) belleğine ekler.
+        2. Ollama LLM veya NLU Fallback motoruyla dış araçları çalıştırır.
+        3. Yanıtı belleğe kaydeder ve kullanıcıya sunar.
         """
-        messages = [
-            {"role": "system", "content": config.SYSTEM_PROMPT},
-            {"role": "user", "content": user_query}
-        ]
+        self.conversation_history.append({"role": "user", "content": user_query})
+        
+        messages = [{"role": "system", "content": config.SYSTEM_PROMPT}] + self.conversation_history
         trace_logs = []
         final_answer = ""
         tool_outputs = []
@@ -168,6 +216,7 @@ class IslamicAgentEngine:
                     final_answer = "\n\n".join(tool_outputs)
 
                 if final_answer:
+                    self.conversation_history.append({"role": "assistant", "content": final_answer})
                     rendered_prompt = "\n".join([f"<|im_start|>{m['role']}\n{m['content']}<|im_end|>" for m in messages])
                     return final_answer, trace_logs, rendered_prompt
             except Exception:
@@ -203,10 +252,14 @@ class IslamicAgentEngine:
             )
             messages.append({"role": "assistant", "content": final_answer})
 
+        self.conversation_history.append({"role": "assistant", "content": final_answer})
         rendered_prompt = "\n".join([f"<|im_start|>{m['role']}\n{m['content']}<|im_end|>" for m in messages])
         return final_answer, trace_logs, rendered_prompt
 
 if __name__ == "__main__":
     engine = IslamicAgentEngine()
-    ans, logs, prompt = engine.run("fettah ne demek")
-    print("YANIT:\n", ans)
+    
+    queries = ["elmelik ne demek", "melik nedir", "er-rahman anlamı", "rahman ne demek", "es-selam ne demek", "selam ne demek"]
+    for q in queries:
+        ans, _, _ = engine.run(q)
+        print(f"=== {q} ===\n{ans}\n")

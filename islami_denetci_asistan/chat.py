@@ -1,23 +1,33 @@
 """
 ==============================================================================
-İSLÂMİ UYGULAMA DOĞRULUK & KAYNAK DENETÇİSİ CLI TERMINAL ARAYÜZÜ (CHAT.PY)
+İSLÂMİ DENETÇİ ASİSTAN - RENKLİ TERMINAL ARAYÜZÜ (CHAT.PY)
 ==============================================================================
-Bu dosya:
-1. Zengin Terminal (CLI - Rich kütüphanesi) üzerinden kullanıcı ile etkileşime geçer.
-2. Tool call adımlarını, parametrelerini ve renkli trace logları canlı basar.
+BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ AÇIKLAMA):
+------------------------------------------------------------------------------
+1. CLI (Command Line Interface / Komut Satırı Arayüzü):
+   Kullanıcının terminal/komut satırı üzerinden asistanla canlı sohbet etmesini
+   sağlayan ana çalışma girişidir (Entry Point).
+
+2. Rich Kütüphanesi & Görsellik:
+   `rich` kütüphanesi kullanılarak konsol panelleri, renkli araç çağrı kutuları
+   ve biçimlendirilmiş çıktılar (Markdown) üretilir.
+
+3. UTF-8 Standardizasyonu:
+   Windows locale ortamlarında Türkçe karakter ve emoji basarken oluşan
+   'UnicodeEncodeError' hatalarını önlemek için `sys.stdout.reconfigure` kullanır.
+==============================================================================
 """
 
 import sys
-import argparse
+import os
 
-if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
-    try:
-        sys.stdout.reconfigure(encoding='utf-8')
-    except Exception:
-        pass
+# Windows konsolunda Türkçe karakter ve emoji desteğini garantileme
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if sys.stdin and hasattr(sys.stdin, "reconfigure"):
+    sys.stdin.reconfigure(encoding="utf-8")
 
 from agent_engine import IslamicAgentEngine
-from database import get_all_inquiries
 
 try:
     from rich.console import Console
@@ -25,81 +35,69 @@ try:
     from rich.markdown import Markdown
     from rich.table import Table
     RICH_AVAILABLE = True
-    console = Console()
 except ImportError:
     RICH_AVAILABLE = False
-    console = None
 
-def print_banner():
+console = Console() if RICH_AVAILABLE else None
+
+def print_header():
+    """Uygulama açılış başlığını ve bilgi panelini basar."""
     if RICH_AVAILABLE:
-        console.print(Panel.fit(
-            "[cyan]Local LLM (Qwen2.5:3b) + Tool Calling + RAG + SQLite DB + DuckDuckGo Web Search[/cyan]\n"
-            "[yellow]Çıkmak için 'çık' veya 'exit' yazın.[/yellow]",
-            title="  İSLAMİ UYGULAMA DOĞRULUK & KAYNAK DENETÇİSİ (EZAN VAKTİ AGENT)",
-            border_style="green"
-        ))
+        header_text = (
+            "[bold green]🕌 İSLAMİ UYGULAMA DOĞRULUK & KAYNAK DENETÇİSİ (EZAN VAKTİ AGENT)[/bold green]\n"
+            "[cyan]Local LLM (Qwen2.5:3b) + Tool Calling + Vector RAG + SQLite DB + Web Search[/cyan]\n"
+            "[yellow]Çıkmak için 'çık' veya 'exit' | Hafızayı sıfırlamak için 'temizle' veya 'reset' yazın.[/yellow]"
+        )
+        console.print(Panel(header_text, title="✨ Magibu Proje Seviye 5 Asistanı", border_style="bright_blue"))
     else:
-        print("==================================================================")
-        print("  Local LLM (Qwen2.5:3b) + Tool Calling + RAG + SQLite DB")
-        print("  Çıkmak için 'çık' veya 'exit' yazın.")
-        print("==================================================================")
+        print("=== İSLAMİ UYGULAMA DOĞRULUK & KAYNAK DENETÇİSİ ===")
 
 def main():
-    parser = argparse.ArgumentParser(description="İslami Denetçi Asistan CLI Arayüzü")
-    parser.add_argument("--query", type=str, help="Tek bir soru sorup çıkmak için")
-    args = parser.parse_args()
-
+    """Terminal sohbet ana döngüsü (CLI Loop)."""
     engine = IslamicAgentEngine()
-    print_banner()
-
-    if args.query:
-        print(f"\n👤 Kullanıcı > {args.query}")
-        ans, logs, prompt = engine.run(args.query)
-        if logs:
-            for log in logs:
-                print(f"\n  🔧 [TOOL CALL]: {log['tool_name']}({log['arguments']})")
-                print(f"  📥 [RESULT]:\n{log['response']}")
-        if RICH_AVAILABLE:
-            console.print("\n🤖 [bold green]Denetçi Asistan >[/bold green]")
-            console.print(Markdown(ans))
-        else:
-            print(f"\n🤖 Denetçi Asistan >\n{ans}")
-        return
+    print_header()
 
     while True:
         try:
-            if RICH_AVAILABLE:
-                user_input = console.input("\n[bold cyan]Kullanıcı > [/bold cyan]").strip()
-            else:
-                user_input = input("\nKullanıcı > ").strip()
+            user_input = input("\nKullanıcı > ").strip()
         except (EOFError, KeyboardInterrupt):
             print("\nÇıkış yapılıyor...")
             break
 
         if not user_input:
             continue
-        if user_input.lower() in {"çık", "cik", "exit", "quit"}:
-            print("Görüşmek üzere!")
+
+        if user_input.lower() in ["çık", "exit", "quit"]:
+            print("Güle güle! Hayırlı günler dileriz.")
             break
 
-        ans, logs, prompt = engine.run(user_input)
+        if user_input.lower() in ["temizle", "reset", "clear"]:
+            engine.clear_memory()
+            if RICH_AVAILABLE:
+                console.print("[bold yellow]🧹 Sohbet geçmişi ve hafıza temizlendi![/bold yellow]")
+            else:
+                print("Sohbet geçmişi temizlendi.")
+            continue
 
-        if logs:
-            for log in logs:
-                if RICH_AVAILABLE:
-                    console.print(f"\n  [bold yellow]🔧 [ARAÇ ÇAĞRILDI]:[/bold yellow] [bold white]{log['tool_name']}[/bold white]({log['arguments']})")
-                    console.print(Panel(str(log['response']), title="📥 Araç Çıktısı", border_style="yellow"))
-                else:
-                    print(f"\n  🔧 [ARAÇ ÇAĞRILDI]: {log['tool_name']}({log['arguments']})")
-                    print(f"  📥 [ARAÇ ÇİKİTİSİ]:\n{log['response']}\n")
+        # Agent Engine Yürütme
+        final_ans, trace_logs, _ = engine.run(user_input)
 
+        # Çağrılan Araçların Loglarını Ekrana Basma
+        for log in trace_logs:
+            tool_msg = f"🔧 [ARAÇ ÇAĞRILDI]: {log['tool_name']}({log['arguments']})"
+            if RICH_AVAILABLE:
+                console.print(f"  [bold yellow]{tool_msg}[/bold yellow]")
+                console.print(Panel(str(log['response'])[:300] + "...", title="📥 Araç Çıktısı", border_style="yellow"))
+            else:
+                print(f"  {tool_msg}")
+
+        # Nihai Yanıtı Ekrana Basma
+        print("\n🤖 Denetçi Asistan >")
         if RICH_AVAILABLE:
-            console.print("\n🤖 [bold green]Denetçi Asistan >[/bold green]")
-            console.print(Markdown(ans))
-            console.print("[dim]" + "-" * 65 + "[/dim]")
+            console.print(Markdown(final_ans))
         else:
-            print(f"\n🤖 Denetçi Asistan >\n{ans}\n")
-            print("-" * 65)
+            print(final_ans)
+        print("-" * 65)
 
 if __name__ == "__main__":
     main()
