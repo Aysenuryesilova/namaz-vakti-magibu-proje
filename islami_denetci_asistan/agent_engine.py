@@ -4,19 +4,18 @@
 ==============================================================================
 BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ VE TEKNİK DÜZELTME):
 ------------------------------------------------------------------------------
-1. Agentic Workflow & ReAct Döngüsü:
-   Asistan sadece bir metin üretici değil; kullanıcının sorusunu analiz eden,
-   hangi aracı (tool) çağıracağına karar veren ve araç çıktısını harmanlayıp
-   kullanıcıya sunan otonom bir ajandır (Agent).
+1. Gerçek ReAct & LLM Tool Result Sentez Döngüsü (LLM Synthesis):
+   Model bir aracı (tool) çağırdıktan sonra, araç çıktısı `role: tool` mesajı
+   olarak yerel modele (Qwen2.5:3b) geri beslenir. Yerel LLM, araç çıktısını
+   Sistem İstemi (System Prompt) kuralları ve Diyanet üslubu çerçevesinde
+   yorumlayarak nihai doğal dil cevabını üretir.
 
 2. Sohbet Geçmişi ve Oturum Belleği (Conversational State & Memory):
    `conversation_history` değişkeni kullanıcının sohbet boyunca sorduğu önceki
    soruları ve konumları hatırlar.
 
 3. Kesin NLU Sözcük Sınırı (Word Boundary Regex Matching):
-   'ali', 'hak', 'nur' gibi kısa Esmaül Hüsna isimlerinin 'ayettir' veya 'hakkında'
-   gibi kelimeler içindeki harflerle yanlışlıkla çakışması (substring collision)
-   regex tam kelime sınırı (`\\bname\\b`) ile %100 önlenmiştir.
+   'ali', 'hak', 'nur' gibi kısa Esmaül Hüsna isimlerinin çakışması önlenmiştir.
 ==============================================================================
 """
 
@@ -123,7 +122,6 @@ class IslamicAgentEngine:
         matched_esma = None
         for name in all_99_esma:
             if len(name) <= 4:
-                # Kısa isimler için tam kelime sınırı kontrolü (\b)
                 if re.search(r'\b' + re.escape(name) + r'\b', q_norm) or re.search(r'\b' + re.escape(name) + r'\b', q):
                     matched_esma = name
                     break
@@ -178,7 +176,7 @@ class IslamicAgentEngine:
         """
         Kullanıcı mesajını işleyen ana fonksiyon:
         1. Mesajı sohbet geçmişi (conversation_history) belleğine ekler.
-        2. Ollama LLM veya NLU Fallback motoruyla dış araçları çalıştırır.
+        2. Ollama LLM ReAct döngüsüyle aracı çağırır ve çıktıyı LLM'e geri verip sentezletir.
         3. Yanıtı belleğe kaydeder ve kullanıcıya sunar.
         """
         self.conversation_history.append({"role": "user", "content": user_query})
@@ -188,7 +186,7 @@ class IslamicAgentEngine:
         final_answer = ""
         tool_outputs = []
 
-        # 1. Ollama LLM ReAct Döngüsü
+        # 1. Ollama LLM ReAct & Tool Output Sentez Döngüsü
         if self.ollama_available:
             try:
                 for turn in range(1, config.MAX_TOOL_ROUNDS + 1):
@@ -219,9 +217,11 @@ class IslamicAgentEngine:
                             "arguments": arguments,
                             "response": output
                         })
+                        # Araç çıktısı modele 'tool' rolünde geri iletilir (LLM Synthesis)
                         messages.append({"role": "tool", "content": str(output)})
 
-                if tool_outputs:
+                # Yerel LLM sentezlenmiş içerik üretmediyse doğrudan araç çıktısına düş
+                if not final_answer and tool_outputs:
                     final_answer = "\n\n".join(tool_outputs)
 
                 if final_answer:
@@ -267,6 +267,5 @@ class IslamicAgentEngine:
 
 if __name__ == "__main__":
     engine = IslamicAgentEngine()
-    ans, logs, _ = engine.run("Kur'an-ı Kerim kaç suredir ve kaç ayettir?")
-    print("TEST 6 CORRECTION RESULT:\n", ans)
-    print("CALLED TOOLS:", [l['tool_name'] for l in logs])
+    ans, logs, _ = engine.run("İstanbul ezan vakitleri")
+    print("ENGINE SYNTHESIS RESULT:\n", ans)

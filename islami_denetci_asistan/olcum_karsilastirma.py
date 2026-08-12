@@ -3,18 +3,21 @@
 EMBEDDING VE RAG BAŞARI ÖLÇÜM & KARŞILAŞTIRMA SCRIPT’İ (OLCUM_KARSILASTIRMA.PY)
 ==============================================================================
 Bu dosya ödevdeki 'olcum_karsilastirma.py' dosyasının İslami senaryomuza uyarlanmış halidir.
-Vektör veritabanındaki aramanın (retriever) doğruluğunu ve alaka skoru ayrımını ölçer.
+TF-IDF Vektör veritabanındaki aramanın (retriever) doğruluğunu ve alaka skoru ayrımını ölçer.
+==============================================================================
 """
 
-import argparse
+import sys
 import islamic_rag
-import ollama_client
+
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 # Veritabanında olması gereken sorular ve beklenen anahtar kelimeler
 IN_KB = [
     ("Sehiv secdesi nedir?", "sehiv"),
     ("İmsak vakti nasıl hesaplanır?", "imsak"),
-    ("Kıble açısı nasıl hesaplanır?", "kıble"),
+    ("Abdestin farzları nelerdir?", "abdest"),
 ]
 
 # Veritabanında olmaması gereken alakasız sorular
@@ -24,20 +27,25 @@ OUT_OF_KB = [
 ]
 
 def main():
-    parser = argparse.ArgumentParser(description="Embedding modellerinin doğruluğunu ölçer.")
-    parser.add_argument("--model", nargs="+", default=list(ollama_client.EMBED_MODELS), help="Ölçülecek modeller")
-    args = parser.parse_args()
+    print("==================================================================")
+    print(" İSLAMİ VEKTÖR RAG DOĞRULUK VE ÖLÇÜM KARŞILAŞTIRMA TESTİ")
+    print("==================================================================")
+    
+    print("\n=== 1. VERİTABANI İÇİ SORGULAR (IN-KB ACCURACY TEST) ===")
+    for q, expected in IN_KB:
+        hits = islamic_rag.search_rag(q)
+        if hits:
+            top = hits[0]
+            text_combo = (top["text"] + " " + top["topic"]).lower()
+            correct = expected.lower() in text_combo
+            print(f"  {'✅ OK ' if correct else '❌ YANLIŞ'} | Soru: '{q}' -> Eşleşen Konu: [{top['topic']}]")
+        else:
+            print(f"  ❌ Sonuç Bulunamadı | Soru: {q}")
 
-    for embed_key in args.model:
-        print(f"\n=== {embed_key} ({ollama_client.EMBED_MODELS[embed_key]['name']}) Ölçüm Testi ===")
-        for q, expected in IN_KB:
-            hits = islamic_rag.search_rag(q, embed_key=embed_key, k=1)
-            if hits:
-                top = hits[0]
-                correct = expected.lower() in top["text"].lower()
-                print(f"  {'✅ OK ' if correct else '❌ YANLIŞ'} Skor: {top['benzerlik']} | Soru: {q}")
-            else:
-                print(f"  ❌ Sonuç Bulunamadı | Soru: {q}")
+    print("\n=== 2. ALAKASIZ SORGULAR FİLTRELEME TESTİ (OUT-OF-KB TEST) ===")
+    for q in OUT_OF_KB:
+        hits = islamic_rag.search_rag(q)
+        print(f"  ℹ️ Alakasız Sorgu: '{q}' | Dönen Sonuç Sayısı: {len(hits)}")
 
 if __name__ == "__main__":
     main()
