@@ -5,7 +5,7 @@
 Bu modül:
 1. Ollama LLM + Tool Calling (Araç Kullanımı) ReAct Döngüsünü yönetir.
 2. Araç sonuçlarını doğrudan asistana aktarır ve halüsinasyon görmeden net cevaplar verir.
-3. NLU motoru ile soru tiplerini ayrıştırıp doğru araçları tetikler.
+3. NLU motoru ile soru tiplerini ayrıştırıp dış veritabanı ve API araçlarını çağırır.
 """
 
 import sys
@@ -31,7 +31,7 @@ class IslamicAgentEngine:
             return False
 
     def extract_city(self, text: str) -> str:
-        """Kullanıcı sorgusundan il/ilçe adını ayıklar."""
+        """Kullanıcı sorgusundan il/ilçe adını ayıklar (Örn: Sivas Gemerek -> Sivas Gemerek, İzmit -> İzmit)."""
         t_clean = (
             text.lower()
             .replace("ezan", "")
@@ -60,7 +60,7 @@ class IslamicAgentEngine:
         """Kullanıcı sorgusuna uygun aracı tespit eder."""
         q = user_query.lower().strip()
         
-        # 1. Namaz vakitleri
+        # 1. Namaz vakitleri (Sivas Gemerek, İzmit, Kadıköy vb.)
         if any(kw in q for kw in ["namaz vakit", "ezan vakit", "imsak", "sahur", "iftar", "vakitleri", "ezan"]):
             city = self.extract_city(user_query)
             return [{"function": {"name": "calculate_prayer_times", "arguments": {"city": city}}}]
@@ -70,18 +70,25 @@ class IslamicAgentEngine:
             city = self.extract_city(user_query)
             return [{"function": {"name": "calculate_qibla_direction", "arguments": {"city": city}}}]
 
-        # 3. Zekat hesabı (SADECE zekat veya nisab kelimesi geçiyorsa)
+        # 3. Esmaül Hüsna (Fettah, Rahman, Rahim, Allah'ın isimleri vb.)
+        esma_names = ["fettah", "rahman", "rahim", "melik", "kuddus", "selam", "mumin", "muheymin", "aziz", "cebbar", "mutekebbir", "halik", "bari", "musavvir", "gaffar", "kahhar", "vehhab", "rezzak", "alim", "esma"]
+        if any(kw in q for kw in esma_names) or "allah'ın isim" in q or "el-" in q or "er-" in q:
+            # Fettah kelimesini yakalayalım
+            match_name = next((name for name in esma_names if name in q and name != "esma"), "fettah" if "fettah" in q else user_query)
+            return [{"function": {"name": "get_esmaul_husna", "arguments": {"query": match_name}}}]
+
+        # 4. Kur'an Ayet / Sure Arama (504. ayet, Nebe suresi, 100. sure, sure meali vb.)
+        if any(kw in q for kw in ["sure", "suresi", "ayet", "ayeti", "kuran kaç", "meal"]):
+            return [{"function": {"name": "search_quran_verse", "arguments": {"query_or_surah": user_query}}}]
+
+        # 5. Zekat hesabı (SADECE zekat veya nisab kelimesi geçiyorsa)
         if "zekat" in q or "nisab" in q:
             numbers = [float(n) for n in re.findall(r'\d+', q)]
             gold = numbers[0] if len(numbers) > 0 else 100.0
             cash = numbers[1] if len(numbers) > 1 else 0.0
             return [{"function": {"name": "calculate_zekat", "arguments": {"gold_grams": gold, "cash_try": cash}}}]
 
-        # 4. Kur'an Ayet / Sure Arama (Nebe suresi, 100. sure, sure meali vb.)
-        if any(kw in q for kw in ["sure", "suresi", "ayet", "kuran kaç", "meal"]):
-            return [{"function": {"name": "search_quran_verse", "arguments": {"query_or_surah": user_query}}}]
-
-        # 5. Veritabanına Soru Kaydetme
+        # 6. Veritabanına Soru Kaydetme
         if any(kw in q for kw in ["kaydet", "ekle", "veritabanına"]):
             topic = "Fıkıh"
             if "namaz" in q: topic = "Namaz"
@@ -89,17 +96,13 @@ class IslamicAgentEngine:
             elif "oruç" in q: topic = "Oruç"
             return [{"function": {"name": "save_inquiry_tool", "arguments": {"topic": topic, "question": user_query, "user_name": "Kullanıcı"}}}]
 
-        # 6. Veritabanı Sorularını Listeleme
+        # 7. Veritabanı Sorularını Listeleme
         if any(kw in q for kw in ["listele", "kayıtlı", "geçmiş sorular", "tüm sorular"]):
             return [{"function": {"name": "get_all_inquiries_tool", "arguments": {}}}]
 
-        # 7. Hadis ve Buhari Doğrulama
+        # 8. Hadis ve Buhari Doğrulama
         if "hadis" in q or "buhari" in q:
             return [{"function": {"name": "verify_hadith_source", "arguments": {"hadith_query": user_query}}}]
-
-        # 8. Esmaül Hüsna
-        if "esma" in q or "allah'ın isim" in q or "el-" in q or "er-" in q:
-            return [{"function": {"name": "get_esmaul_husna", "arguments": {"query": user_query}}}]
 
         # 9. Ramazan / İslami Takvim
         if "ramazan" in q or "bayram" in q or "hicri" in q:
@@ -161,7 +164,7 @@ class IslamicAgentEngine:
                         })
                         messages.append({"role": "tool", "content": str(output)})
 
-                if tool_outputs and not final_answer:
+                if tool_outputs:
                     final_answer = "\n\n".join(tool_outputs)
 
                 if final_answer:
@@ -170,7 +173,7 @@ class IslamicAgentEngine:
             except Exception:
                 pass
 
-        # 2. Akıllı Fallback / NLU Motoru (Kesintisiz Araç Çalıştırma)
+        # 2. Akıllı NLU Motoru (Kesintisiz Dış Araç Çağrısı)
         fallback_calls = self.detect_fallback_tool(user_query)
         if fallback_calls:
             for call in fallback_calls:
@@ -205,5 +208,5 @@ class IslamicAgentEngine:
 
 if __name__ == "__main__":
     engine = IslamicAgentEngine()
-    ans, logs, prompt = engine.run("İZMİT MERKEZ EZAN VAKİTLERİ")
+    ans, logs, prompt = engine.run("fettah ne demek")
     print("YANIT:\n", ans)

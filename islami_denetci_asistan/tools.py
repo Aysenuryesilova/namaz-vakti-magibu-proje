@@ -3,12 +3,12 @@
 İSLÂMİ UYGULAMA DOĞRULUK DENETÇİSİ - KUSURSUZ VE KESİN ARAÇLAR (TOOLS.PY)
 ==============================================================================
 Bu dosya:
-1. Türkiye'nin 81 İli ve TÜM 922 İLÇESİ (İzmit, Kadıköy, Şarkışla, Hasköy, Edremit, Of vb.)
-2. Kur'an-ı Kerim 114 SURENİN TAMAMI (İsimleri, Sure Numaraları 1-114, Ayet Sayıları, Anlamları)
-3. Zekat & Nisab Hesap Makinesi (Fıkhi Kod Yürütme)
-4. Canlı İnternet Araması (DuckDuckGo / Web Araması)
-5. SQLite Veritabanı Soru Kaydetme ve Okuma (Veri Yazma & Veri Okuma)
-6. Teheccüd, Sehiv Secdesi, Hadis Doğrulama ve Esmaül Hüsna
+1. Türkiye'nin 81 İli ve TÜM 922 İLÇESİ (Sivas Gemerek, İzmit, Kadıköy, Şarkışla, Hasköy, Edremit, Of vb.)
+2. Allah'ın 99 İSMİNİN TAMAMI (Esmaül Hüsna: El-Fettah, Er-Rahman, Er-Rahim, El-Melik vb.)
+3. Kur'an 114 SURE VE 6236 AYETİN TAMAMI (Sure numaraları, ayet mealleri, 504. genel ayet sırası)
+4. Zekat & Nisab Hesap Makinesi (Fıkhi Kod Yürütme)
+5. Canlı İnternet Araması (DuckDuckGo / Web Araması)
+6. SQLite Veritabanı Soru Kaydetme ve Okuma
 kesin ve hatasız bilgi üretir. %100 dinamik ve kapsayıcıdır.
 """
 
@@ -31,7 +31,7 @@ except ImportError:
 
 
 # ==============================================================================
-# TÜRKİYE 81 İLİ VE ÖNEMLİ İLÇELER KOORDİNAT HARİTASI
+# TÜRKİYE 81 İLİ SABİT KOORDİNAT HARİTASI
 # ==============================================================================
 TURKEY_PROVINCES = {
     "adana": (37.0000, 35.3213, "Adana"), "adıyaman": (37.7648, 38.2786, "Adıyaman"),
@@ -199,7 +199,7 @@ QURAN_SURAH_DATABASE = {
 }
 
 # ==============================================================================
-# ESMAÜL HÜSNA (ALLAH'IN 99 İSMİ)
+# ESMAÜL HÜSNA (ALLAH'IN 99 İSMİ VE TÜRKÇE ANLAMLARI)
 # ==============================================================================
 ESMAUL_HUSNA = {
     "allah": "Eşi benzeri olmayan, tek ilah olan, tüm övgülere layık en yüce isim.",
@@ -220,51 +220,135 @@ ESMAUL_HUSNA = {
     "kahhar": "Her şeye her an galip gelen, mutlak mutasarrıf.",
     "vehhab": "Karşılıksız, sebepsiz ve bolca nimet bahşeden.",
     "rezzak": "Bütün yaratılanların rızkını veren ve ihtiyacını karşılayan.",
-    "fettah": "Her türlü zorluğu açan, kapıları kolaylaştıran, zafere ulaştıran.",
-    "alim": "Gizli ve açık her şeyi eksiksiz, mükemmel bilen."
+    "fettah": "Her türlü zorluğu açan, kapıları kolaylaştıran, zafere ulaştıran, dilediği kuluna hayır ve bereket kapılarını açan sonsuz lütuf sahibi.",
+    "alim": "Gizli ve açık her şeyi eksiksiz, mükemmel bilen.",
+    "kabid": "Dilediğine rızkı daraltan, ruhları kabzeden.",
+    "basit": "Dilediğine rızkı genişleten, ruhları yayan.",
+    "hafid": "Kafirleri ve zalimleri alçaltan.",
+    "rafi": "Müminleri ve salih kulları yükselten.",
+    "muizz": "Dilediğini aziz kılan, izzet ve şeref veren.",
+    "mudhill": "Dilediğini zillete düşüren, hor ve hakir kılan.",
+    "semi": "Gizli açık her sesi ve duayı eksiksiz işiten.",
+    "basir": "Karanlıkta kıpırdayan en küçük şeyi dahi eksiksiz gören.",
+    "hakam": "Mutlak hakim, hakkı batıldan ayıran.",
+    "adl": "Mutlak adalet sahibi, asla zulmetmeyen.",
+    "latif": "Lütufkar, kullarına sezdirmeden lütfeden.",
+    "habir": "Her şeyin iç yüzünden ve gizlisinden haberdar olan.",
+    "halim": "Cezalandırmada acele etmeyen, yumuşaklık sahibi.",
+    "azim": "Büyüklüğünün ve azametinin sınırı olmayan.",
+    "gafur": "Bağışlaması ve af yardımı çok bol olan.",
+    "şekur": "Az amele çok mükafat veren.",
+    "ali": "Yücelikte eşsiz ve benzersiz olan.",
+    "kebir": "Büyüklükte sonsuz olan.",
+    "hafiz": "Her şeyi koruyan ve gözeten.",
+    "mukit": "Her mahlukatın gıdasını veren.",
+    "hasib": "Kulların hesabını en iyi gören.",
+    "celil": "Celal ve azamet sahibi olan.",
+    "kerim": "İkramı ve lütfu sonsuz olan.",
+    "rakib": "Her an her varlığı kontrol eden.",
+    "mucib": "Dualara ve isteklere icabet eden.",
+    "vasi": "İlmi, merhameti ve lütfu her şeyi kaplayan.",
+    "hakim": "Her işi hikmetli ve yerli yerinde olan.",
+    "vedud": "Kullarını çok seven ve sevilmeye en layık olan.",
+    "mecid": "Şanı ve şerefi çok yüce olan.",
+    "bais": "Ölüleri dirilten ve peygamberler gönderen.",
+    "şehid": "Her zaman ve her yerde hazır ve nazır olan.",
+    "hakk": "Varlığı hiç değişmeyen, mutlak gerçek.",
+    "vekil": "Kendine güvenip dayananların işini en iyi yöneten.",
+    "kavi": "Kudreti ve gücü sonsuz olan.",
+    "metin": "Çok sağlam ve sarsılmaz güç sahibi.",
+    "veli": "Müminlerin dostu ve yardımcısı.",
+    "hamid": "Övülmeye en layık olan.",
+    "muhsi": "Kainattaki her şeyin sayısını bilen.",
+    "mubdi": "Maddesiz ve örneksiz olarak ilk kez yaratan.",
+    "muid": "Yaratılmışları öldükten sonra tekrar dirilten.",
+    "muhyi": "Can veren, hayat bahşeden.",
+    "mumit": "Canlıların hayatına son veren, öldüren.",
+    "hayy": "Daima diri, canlı ve sonsuz hayat sahibi.",
+    "kayyum": "Gökleri, yeri ve tüm evreni ayakta tutan.",
+    "vacid": "İstediğini istediği an bulan.",
+    "macid": "Kadr-u şanı yüce, cömertliği bol olan.",
+    "vahid": "Zatında ve sıfatlarında tek ve eşsiz olan.",
+    "samad": "Hiçbir şeye muhtaç olmayan, her şeyin kendisine muhtaç olduğu.",
+    "kadir": "Dilediğini dilediği gibi yapmaya gücü yeten.",
+    "muktedir": "Her şey üzerinde mutlak güç ve tasarruf sahibi.",
+    "mukaddim": "Dilediğini öne alan, öne geçiren.",
+    "muahhir": "Dilediğini geriye bırakan.",
+    "evvel": "Varlığının başlangıcı olmayan, ebedi ilk.",
+    "ahir": "Varlığının sonu olmayan, ebedi son.",
+    "zahir": "Varlığı açık ve ashikar olan.",
+    "batin": "Zatı gizli, duyu organlarıyla algılanamayan.",
+    "vali": "Kainatı ve gerçekleşen tüm olayları yöneten.",
+    "mutaali": "Aklın alabileceği her şeyden yüce olan.",
+    "barr": "İyiliği ve ihsanı bol olan.",
+    "tevvab": "Tövbeleri kabul edip günahları bağışlayan.",
+    "muntekim": "Zalimlerden ve suçlulardan adaletle intikam alan.",
+    "afuv": "Affı çok olan, günahları silen.",
+    "rauf": "Pek şefkatli ve merhametli.",
+    "malikul_mulk": "Mülkün gerçek ve tek sahibi.",
+    "zulcclali_val_ikram": "Büyüklük, azamet ve ikram sahibi.",
+    "muksit": "Adaletle hükmeden, mazlumun hakkını alan.",
+    "cami": "İstediğini istediği zaman ve yerde toplayan.",
+    "ghani": "Çok zengin, hiçbir şeye muhtaç olmayan.",
+    "mughni": "Dilediğini zengin kılan.",
+    "mani": "Dilediği şeyin gerçekleşmesine engel olan.",
+    "darr": "Elem ve zarar veren şeyleri yaratan.",
+    "nafi": "Fayda veren şeyleri yaratan.",
+    "nur": "Alemleri nurlandıran, yol gösteren.",
+    "hadi": "Hidayet veren, doğru yola ileten.",
+    "badi": "Örneksiz ve harika şeyler yaratan.",
+    "baqi": "Varlığının sonu olmayan, ebedi.",
+    "varis": "Mülkün gerçek ve son varisi.",
+    "raşid": "Doğru yolu gösteren, işleri hikmetle yürüten.",
+    "sabur": "Çok sabırlı, cezalandırmada acele etmeyen."
 }
 
 
 # ==============================================================================
-# TAMAMEN DİNAMİK VE TEMİZ KOORDİNAT BULUCU (%100 DİNAMİK)
+# TAMAMEN DİNAMİK VE TEMİZ KOORDİNAT BULUCU (%100 DİNAMİK İLÇE KONTROLÜ)
 # ==============================================================================
 def get_coordinates_by_city(city_name: str) -> tuple[float, float, str]:
-    """Türkiye'nin 81 İli ve TÜM 922 İLÇESİ için koordinat bulur."""
-    clean_name = city_name.strip()
-    clean_lower = (
-        clean_name.lower()
-        .replace("i̇", "i")
-        .replace("ı", "i")
-        .replace("ğ", "g")
-        .replace("ü", "u")
-        .replace("ş", "s")
-        .replace("ö", "o")
-        .replace("ç", "c")
+    """
+    Türkiye'nin 81 ili ve TÜM 922 İLÇESİ (Örn: Sivas Gemerek, İzmit, Kadıköy, Şarkışla, Hasköy)
+    için dinamik olarak enlem, boylam ve resmi konum adını bulur.
+    """
+    raw_name = city_name.strip()
+    clean_search = (
+        raw_name.lower()
+        .replace("i̇", "i").replace("ı", "i").replace("ğ", "g").replace("ü", "u").replace("ş", "s").replace("ö", "o").replace("ç", "c")
+        .replace("ezan", "").replace("namaz", "").replace("vakti", "").replace("vakitleri", "").replace("merkez", "").strip()
     )
+    tokens = [t.strip("?,.!") for t in clean_search.split() if len(t.strip("?,.!")) >= 2]
 
+    # 1. Aşama: Canlı Geocoding API ile İlçe/İl Araması (Örn: Gemerek, Sivas Gemerek, İzmit)
+    search_terms = [clean_search] + list(reversed(tokens))
+    for term in search_terms:
+        if not term:
+            continue
+        try:
+            url = f"https://geocoding-api.open-meteo.com/v1/search?name={requests.utils.quote(term)}&count=5&language=tr"
+            res = requests.get(url, headers=HEADERS, timeout=5).json()
+            results = res.get("results", [])
+            
+            if results:
+                tr_match = next((r for r in results if r.get("country_code") == "TR"), results[0])
+                lat = float(tr_match["latitude"])
+                lon = float(tr_match["longitude"])
+                name = tr_match.get("name", term.title())
+                admin1 = tr_match.get("admin1", "")
+                country = tr_match.get("country", "")
+                label = f"{name}{', ' + admin1 if admin1 and admin1 != name else ''}"
+                return lat, lon, label
+        except Exception:
+            pass
+
+    # 2. Aşama: 81 İl Sabit Haritası Kontrolü
     for prov_key, (lat, lon, label) in TURKEY_PROVINCES.items():
         prov_clean = prov_key.replace("i̇", "i").replace("ı", "i").replace("ğ", "g").replace("ü", "u").replace("ş", "s").replace("ö", "o").replace("ç", "c")
-        if prov_clean in clean_lower or clean_lower in prov_clean:
+        if prov_clean in clean_search:
             return lat, lon, label
 
-    try:
-        url = f"https://geocoding-api.open-meteo.com/v1/search?name={requests.utils.quote(clean_name)}&count=5&language=tr"
-        res = requests.get(url, headers=HEADERS, timeout=8).json()
-        results = res.get("results", [])
-        
-        if results:
-            tr_match = next((r for r in results if r.get("country_code") == "TR"), results[0])
-            lat = float(tr_match["latitude"])
-            lon = float(tr_match["longitude"])
-            name = tr_match.get("name", clean_name)
-            admin1 = tr_match.get("admin1", "")
-            country = tr_match.get("country", "")
-            label = f"{name}{', ' + admin1 if admin1 and admin1 != name else ''} ({country})"
-            return lat, lon, label
-    except Exception:
-        pass
-
-    return 38.9637, 35.2433, clean_name.title()
+    return 38.9637, 35.2433, raw_name.title()
 
 
 # ==============================================================================
@@ -370,12 +454,7 @@ def calculate_zekat(
     gold_price_per_gram: float = 3000.0,
     silver_price_per_gram: float = 35.0
 ) -> str:
-    """
-    Altın, gümüş, nakit para, ticari mallar ve borçlar üzerinden
-    Diyanet fıkhi esaslarına göre zekat matrahı ve nisab durumunu hesaplar.
-    Nisab Miktarı: 80.18 gram altın veya karşılığı nakit.
-    Zekat Oranı: %2.5 (1/40).
-    """
+    """Altın, gümüş, nakit para ve borçlar üzerinden Diyanet zekat hesabı yapar."""
     try:
         NISAB_GOLD_GRAMS = 80.18
         nisab_value_try = NISAB_GOLD_GRAMS * gold_price_per_gram
@@ -460,10 +539,10 @@ def get_all_inquiries_tool() -> str:
 
 
 # ==============================================================================
-# ARAÇ 7: Kur'an-ı Kerim 114 Sure, Numaralar, Ayet Sayıları ve Mealler
+# ARAÇ 7: Kur'an-ı Kerim 114 Sure, Numaralar, Ayet Sırası ve Mealler
 # ==============================================================================
 def search_quran_verse(query_or_surah: str) -> str:
-    """Kur'an 114 sure, sure numarası (1-114, Örn: 100. sure, Nebe suresi), ayet sayıları ve mealleri sorgular."""
+    """Kur'an 114 sure, sure numaraları (1-114, Örn: 100. sure, Nebe suresi), 504. ayet sırası ve mealleri sorgular."""
     q_raw = query_or_surah.strip()
     q_clean = q_raw.lower().replace("i̇", "i")
     
@@ -478,7 +557,29 @@ def search_quran_verse(query_or_surah: str) -> str:
             "   • En Kısa Sure       : Kevser Suresi (3 Ayet)"
         )
 
-    # 2. Numaraya göre arama (Örn: "100", "100. sure", "78", "78. sure")
+    # 2. Genel Ayet Sırası Sorgusu (Örn: "504. ayet", "504. ayet nedir?")
+    cumulative_verse_match = re.search(r'\b(\d{1,4})\.\s*ayet\b', q_clean)
+    if cumulative_verse_match:
+        verse_num = int(cumulative_verse_match.group(1))
+        try:
+            url = "https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/tur-diyanetisleri.json"
+            res = requests.get(url, headers=HEADERS, timeout=8)
+            if res.status_code == 200:
+                quran_data = res.json().get("quran", [])
+                if 1 <= verse_num <= len(quran_data):
+                    item = quran_data[verse_num - 1]
+                    s_num = item.get("chapter", 1)
+                    s_info = QURAN_SURAH_DATABASE.get(s_num, {"name": f"{s_num}. Sure"})
+                    return (
+                        f"📖 **Kur'an-ı Kerim {verse_num}. Genel Ayet Bilgisi (Diyanet Meali)**:\n"
+                        f"   • Sure Adı    : {s_info['name']} Suresi ({s_num}. Sure)\n"
+                        f"   • Ayet Numarası: {item.get('verse')}. Ayet\n"
+                        f"   • Türkçe Meali: \"{item.get('text')}\""
+                    )
+        except Exception:
+            pass
+
+    # 3. Sure Numarasına Göre Arama (Örn: "100", "100. sure", "78", "78. sure")
     surah_num_match = re.search(r'\b(1[0-1][0-4]|[1-9]?[0-9])\b', q_raw)
     if surah_num_match and ("sure" in q_clean or q_raw.replace(".", "").isdigit()):
         s_num = int(surah_num_match.group(1))
@@ -493,7 +594,7 @@ def search_quran_verse(query_or_surah: str) -> str:
                 f"   • Nüzul Yeri  : {info['nuzul']} Dönemi"
             )
 
-    # 3. İsime göre arama (Örn: "nebe", "yasin", "fatiha", "bakara", "adiyat")
+    # 4. İsime Göre Sure Arama (Örn: "nebe", "yasin", "fatiha", "bakara", "adiyat")
     for s_num, info in QURAN_SURAH_DATABASE.items():
         s_name_clean = info['name'].lower().replace("i̇", "i").replace("â", "a").replace("î", "i").replace("û", "u").replace("'", "")
         if s_name_clean in q_clean or info['name'].lower() in q_clean:
@@ -505,7 +606,7 @@ def search_quran_verse(query_or_surah: str) -> str:
                 f"   • Nüzul Yeri  : {info['nuzul']} Dönemi"
             )
 
-    # 4. Diyanet Meal API'sinden Canlı Metin Araması
+    # 5. Diyanet Meal API'sinden Canlı Metin Araması
     try:
         url = "https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/tur-diyanetisleri.json"
         res = requests.get(url, headers=HEADERS, timeout=8)
@@ -564,19 +665,28 @@ def islamic_knowledge_question(question: str) -> str:
 
 
 # ==============================================================================
-# ARAÇ 9: Esmaül Hüsna (Allah'ın 99 İsmi ve Anlamları)
+# ARAÇ 9: Esmaül Hüsna (Allah'ın 99 İsmi ve Türkçe Anlamları)
 # ==============================================================================
 def get_esmaul_husna(query: str = "") -> str:
-    """Allah'ın 99 İsmini (El-Melik, Er-Rahman vb.) ve Türkçe anlamlarını getirir."""
+    """Allah'ın 99 İsmini (El-Fettah, Er-Rahman, Er-Rahim vb.) ve Türkçe anlamlarını getirir."""
     try:
-        q_clean = query.lower().strip().replace("el-", "").replace("er-", "").replace("es-", "").replace("ez-", "")
+        q_clean = (
+            query.lower().strip()
+            .replace("el-", "")
+            .replace("er-", "")
+            .replace("es-", "")
+            .replace("ez-", "")
+            .replace("ef-", "")
+            .replace("anlamı", "")
+            .replace("ne demek", "")
+            .replace("nedir", "")
+            .strip()
+        )
         
-        if q_clean in ESMAUL_HUSNA:
-            return f"✨ **Esmaül Hüsna**: '{query.title()}'\n   • Türkçe Anlamı: {ESMAUL_HUSNA[q_clean]}"
-        
-        for k, v in ESMAUL_HUSNA.items():
-            if q_clean in k or q_clean in v.lower():
-                return f"✨ **Esmaül Hüsna**: '{k.title()}'\n   • Türkçe Anlamı: {v}"
+        for name_key, meaning in ESMAUL_HUSNA.items():
+            if name_key in q_clean or q_clean in name_key:
+                formatted_name = "El-" + name_key.title()
+                return f"✨ **Esmaül Hüsna**: '{formatted_name}'\n   • Türkçe Anlamı: {meaning}"
                 
         return "✨ Esmaül Hüsna: Allah'ın 99 yüce ismi ve anlamları veritabanında mevcuttur."
     except Exception as exc:
@@ -683,11 +793,11 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "calculate_prayer_times",
-            "description": "Türkiye'nin 81 ili ve TÜM 922 İLÇESİ (İzmit, Kadıköy, Şarkışla, Hasköy, Edremit, Of vb.) için namaz vakitlerini getirir.",
+            "description": "Türkiye'nin 81 ili ve TÜM 922 İLÇESİ (Sivas Gemerek, İzmit, Kadıköy, Şarkışla, Hasköy, Edremit, Of vb.) için namaz vakitlerini getirir.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "city": {"type": "string", "description": "Şehir veya ilçe adı (Örn: İzmit, İstanbul, Ankara, Sivas)"},
+                    "city": {"type": "string", "description": "Şehir veya ilçe adı (Örn: Sivas Gemerek, İzmit, İstanbul, Ankara)"},
                     "date_str": {"type": "string", "description": "Tarih YYYY-MM-DD"},
                 },
                 "required": ["city"],
@@ -776,11 +886,11 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "search_quran_verse",
-            "description": "Kur'an 114 sure, sure numaraları (1-114, Örn: 100. sure, Nebe suresi), ayet sayıları ve mealleri sorgular.",
+            "description": "Kur'an 114 sure, sure numaraları (1-114, Örn: 100. sure, Nebe suresi), 504. ayet sırası ve mealleri sorgular.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query_or_surah": {"type": "string", "description": "Sure adı veya sure numarası (Örn: 'Nebe', '100', 'Bakara')"},
+                    "query_or_surah": {"type": "string", "description": "Sure adı, sure numarası veya genel ayet numarası (Örn: 'Nebe', '100', '504. ayet')"},
                 },
                 "required": ["query_or_surah"],
             },
@@ -804,11 +914,11 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "get_esmaul_husna",
-            "description": "Allah'ın 99 İsmini ve Türkçe anlamlarını getirir.",
+            "description": "Allah'ın 99 İsmini (El-Fettah, Er-Rahman, Er-Rahim vb.) ve Türkçe anlamlarını getirir.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Allah'ın ismi"},
+                    "query": {"type": "string", "description": "Allah'ın ismi (Örn: Fettah, Rahman, Rahim)"},
                 },
                 "required": ["query"],
             },

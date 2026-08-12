@@ -33,7 +33,6 @@ except ImportError:
 def print_banner():
     if RICH_AVAILABLE:
         console.print(Panel.fit(
-            "[bold green]🕌 İSLAMİ UYGULAMA DOĞRULUK & KAYNAK DENETÇİSİ (EZAN VAKTİ AGENT)[/bold green]\n"
             "[cyan]Local LLM (Qwen2.5:3b) + Tool Calling + RAG + SQLite DB + DuckDuckGo Web Search[/cyan]\n"
             "[yellow]Çıkmak için 'çık' veya 'exit' yazın.[/yellow]",
             title="  İSLAMİ UYGULAMA DOĞRULUK & KAYNAK DENETÇİSİ (EZAN VAKTİ AGENT)",
