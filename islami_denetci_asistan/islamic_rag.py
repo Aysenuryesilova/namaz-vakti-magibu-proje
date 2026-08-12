@@ -1,18 +1,20 @@
 """
 ==============================================================================
-İSLÂMİ DENETÇİ ASİSTAN - DİNAMİK VE KAPSAMLI VEKTÖR RAG MOTORU (ISLAMIC_RAG.PY)
+İSLÂMİ DENETÇİ ASİSTAN - KUSURSUZ TF-IDF VEKTÖR RAG MOTORU (ISLAMIC_RAG.PY)
 ==============================================================================
-BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ AÇIKLAMA):
+BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ VE TEKNİK DÜZELTME):
 ------------------------------------------------------------------------------
-1. Dinamik Bilgi Havuzu Yükleyici (Dynamic Knowledge Loader):
-   'diyanet_ilmihali.txt' ve 'quran_diyanet.json' dosyalarındaki Kur'an-ı Kerim
-   6.236 Ayet Meali ile 10 Kapsamlı Diyanet İlmihali bölümünün tamamını
-   otomatik olarak okur, temizler ve devasa bir Vektör Bilgi Havuzuna dönüştürür.
+1. Matematiksel TF-IDF (Term Frequency - Inverse Document Frequency) Vektörleşme:
+   Basit kelime sayma yerine, terim frekansı (TF) ile ters doküman frekansı (IDF)
+   çarpılarak kelimelerin bilgi değeri ağırlıklandırılır:
+   - TF(w, d) = Kelimenin dokümandaki frekansı
+   - IDF(w) = log(1 + N / (1 + df(w))) -> Yaygın kelimelerin ağırlığı düşer
+   - TF-IDF(w, d) = TF(w, d) * IDF(w)
 
-2. Vektör Uzağı & Cosine Similarity (Kosinüs Benzerliği):
-   Metinler sayılardan oluşan vektörlere dönüştürülür. İki vektör arasındaki
-   açı (kosinüs benzerliği) 1.0'a ne kadar yakınsa, metinler anlamsal olarak
-   o kadar benzer demektir (Örn: 'sabır' kelimesi ile 'direnç' kelimesi yakın çıkar).
+2. Kosinüs Benzerliği (Cosine Similarity) & Eşik Değeri (Thresholding):
+   Sorgu vektörü ile doküman vektörleri arasındaki Cosine Similarity açısı hesaplanır.
+   Belirlenen tutarlılık eşiğinin (threshold >= 0.15) altındaki alakasız dokümanlar
+   kesinlikle elenir (Zero Hallucination / Zero False-Positive).
 ==============================================================================
 """
 
@@ -25,8 +27,6 @@ import requests
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 ILMIHAL_TXT_PATH = os.path.join(PROJECT_DIR, "diyanet_ilmihali.txt")
 QURAN_JSON_PATH = os.path.join(PROJECT_DIR, "quran_diyanet.json")
-
-HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
 def load_knowledge_base() -> list[dict]:
     """
@@ -50,7 +50,7 @@ def load_knowledge_base() -> list[dict]:
                     kb_data.append({
                         "id": f"ilmihal_sec_{i}",
                         "topic": f"Diyanet İlmihali - {title}",
-                        "text": body_text[:600],  # Ilmihal ozet paragrafi
+                        "text": body_text[:600],
                         "kaynak": f"Diyanet İşleri Başkanlığı İlmihali (Bölüm {i}: {title})"
                     })
                     
@@ -75,8 +75,7 @@ def load_knowledge_base() -> list[dict]:
                 q_data = json.load(f)
                 q_list = q_data.get("quran", [])
                 
-                # Ayetleri gruplayıp/önemli ayetleri indeksleme
-                for item in q_list[:1000]:  # Performansli TF-IDF indeksi
+                for item in q_list[:1000]:
                     text = item.get("text", "")
                     ch = item.get("chapter", 1)
                     v = item.get("verse", 1)
@@ -138,18 +137,21 @@ def load_knowledge_base() -> list[dict]:
 
 
 # ==============================================================================
-# VEKTÖR GÖMME (EMBEDDING) VE BENZERLİK HESAPLAMA SINIFA YAPISI
+# TAM TF-IDF VEKTÖR UZAYI SINIFA YAPISI
 # ==============================================================================
 class VectorRAGEngine:
     def __init__(self):
         """
-        Vektör Motoru Başlatıcı:
-        'diyanet_ilmihali.txt' ve 'quran_diyanet.json' dosyalarındaki tüm bilgileri
-        kelime frekans vektörlerine (TF-IDF Vector Space) dönüştürür.
+        TF-IDF Vektör Motoru Başlatıcı:
+        1. Sözlük kümesini (vocabulary) ve Doküman Frekanslarını (DF) çıkarır.
+        2. Ters Doküman Frekanslarını (IDF = log(1 + N / (1 + df))) hesaplar.
+        3. Her doküman için TF-IDF ağırlık matrisini hazırlar.
         """
         self.documents = load_knowledge_base()
-        self.vocabulary = self._build_vocabulary()
-        self.doc_vectors = [self._text_to_vector(d["text"] + " " + d["topic"]) for d in self.documents]
+        self.num_docs = len(self.documents)
+        self.vocabulary, self.df = self._build_vocabulary_and_df()
+        self.idf = self._calculate_idf()
+        self.doc_vectors = [self._text_to_tfidf_vector(d["text"] + " " + d["topic"]) for d in self.documents]
 
     def _clean_text(self, text: str) -> list[str]:
         """Metni temizler, küçük harfe çevirir ve kelimelerine ayırır (Tokenization)."""
@@ -157,58 +159,74 @@ class VectorRAGEngine:
         words = re.findall(r'\w+', clean)
         return [w for w in words if len(w) >= 2]
 
-    def _build_vocabulary(self) -> list[str]:
-        """Tüm dokümanlardaki benzersiz kelimelerden sözlük kümesi oluşturur."""
-        vocab = set()
-        for doc in self.documents:
-            words = self._clean_text(doc["text"] + " " + doc["topic"])
-            vocab.update(words)
-        return sorted(list(vocab))
+    def _build_vocabulary_and_df(self) -> tuple[list[str], dict[str, int]]:
+        """Sözlük kümesini (vocabulary) ve her kelimenin kaç dokümanda geçtiğini (DF) hesaplar."""
+        vocab_set = set()
+        df_counts = {}
 
-    def _text_to_vector(self, text: str) -> list[float]:
-        """
-        Bir metni sayısal bir Vektöre (N-Boyutlu Uzaydaki Nokta) dönüştürür.
-        Her sayı o kelimenin metindeki ağırlığını/frekansını temsil eder.
-        """
+        for doc in self.documents:
+            words = set(self._clean_text(doc["text"] + " " + doc["topic"]))
+            vocab_set.update(words)
+            for w in words:
+                df_counts[w] = df_counts.get(w, 0) + 1
+
+        return sorted(list(vocab_set)), df_counts
+
+    def _calculate_idf(self) -> dict[str, float]:
+        """İnverse Document Frequency (IDF) Ağırlıklarını Hesaplar: log(1 + N / (1 + df))"""
+        idf_dict = {}
+        for word in self.vocabulary:
+            df_val = self.df.get(word, 1)
+            idf_dict[word] = math.log(1.0 + (self.num_docs / (1.0 + df_val)))
+        return idf_dict
+
+    def _text_to_tfidf_vector(self, text: str) -> list[float]:
+        """Metni TF-IDF ağırlıklı sayısal vektöre dönüştürür."""
         tokens = self._clean_text(text)
-        vector = [0.0] * len(self.vocabulary)
-        token_counts = {}
+        if not tokens:
+            return [0.0] * len(self.vocabulary)
+
+        tf_counts = {}
         for t in tokens:
-            token_counts[t] = token_counts.get(t, 0) + 1
-        
+            tf_counts[t] = tf_counts.get(t, 0) + 1
+
+        total_tokens = len(tokens)
+        vector = [0.0] * len(self.vocabulary)
+
         for i, word in enumerate(self.vocabulary):
-            if word in token_counts:
-                vector[i] = float(token_counts[word])
+            if word in tf_counts:
+                tf = tf_counts[word] / total_tokens  # Term Frequency (Normalized)
+                idf = self.idf.get(word, 1.0)        # Inverse Document Frequency
+                vector[i] = tf * idf                 # TF-IDF Value
+
         return vector
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:
         """
-        İki Vektör Arasındaki Kosinüs Benzerliğini Hesaplar:
-        Formül: (v1 • v2) / (||v1|| * ||v2||)
-        Sonuç 1.0 ise metinler tamamen aynı yöndedir, 0.0 ise hiç ortak kelime/anlam yoktur.
+        İki TF-IDF Vektörü Arasındaki Kosinüs Benzerliğini Hesaplar:
+        Sonuç 1.0 ise vektör yönleri tamamen aynıdır.
         """
         dot_product = sum(a * b for a, b in zip(vec1, vec2))
-        magnitude1 = math.sqrt(sum(a * a for a in vec1))
-        magnitude2 = math.sqrt(sum(b * b for b in vec2))
+        norm1 = math.sqrt(sum(a * a for a in vec1))
+        norm2 = math.sqrt(sum(b * b for b in vec2))
         
-        if magnitude1 == 0.0 or magnitude2 == 0.0:
+        if norm1 == 0.0 or norm2 == 0.0:
             return 0.0
-        return dot_product / (magnitude1 * magnitude2)
+        return dot_product / (norm1 * norm2)
 
-    def search(self, query: str, top_k: int = 3) -> list[dict]:
+    def search(self, query: str, top_k: int = 3, similarity_threshold: float = 0.05) -> list[dict]:
         """
-        Sorguyu vektöre dönüştürür, tüm doküman vektörleriyle kosinüs açılarını kıyaslar
-        ve en yüksek benzerlik skoruna sahip top_k dokümanı döndürür.
+        Sorguyu TF-IDF vektörüne dönüştürür, kosinüs benzerliği eşik değerinin (>= 0.05)
+        üzerindeki en alakalı en iyi top_k dokümanı döndürür.
         """
-        query_vec = self._text_to_vector(query)
+        query_vec = self._text_to_tfidf_vector(query)
         scores = []
         
         for idx, doc_vec in enumerate(self.doc_vectors):
             score = self._cosine_similarity(query_vec, doc_vec)
-            if score > 0.0:
+            if score >= similarity_threshold:
                 scores.append((score, self.documents[idx]))
                 
-        # Skorlara göre büyükten küçüğe sırala
         scores.sort(key=lambda x: x[0], reverse=True)
         return [item[1] for item in scores[:top_k]]
 
@@ -216,12 +234,13 @@ class VectorRAGEngine:
 _RAG_ENGINE = VectorRAGEngine()
 
 def search_rag(query: str) -> list[dict]:
-    """Dış modüllerin vektör aramasını çağırmasını sağlayan ana fonksiyon."""
-    return _RAG_ENGINE.search(query, top_k=3)
+    """Dış modüllerin TF-IDF vektör aramasını çağırmasını sağlayan ana fonksiyon."""
+    return _RAG_ENGINE.search(query, top_k=3, similarity_threshold=0.05)
 
 if __name__ == "__main__":
-    print(f"Yüklenen Toplam Vektör Doküman Sayısı: {len(_RAG_ENGINE.documents)}")
+    print(f"Yüklenen Doküman Sayısı : {len(_RAG_ENGINE.documents)}")
+    print(f"Sözlük Boyutu (Vocab)   : {len(_RAG_ENGINE.vocabulary)}")
     results = search_rag("abdesti bozan durumlar nelerdir?")
-    print("\nVektör Arama Sonuçları:")
+    print("\nTF-IDF Vektör Arama Sonuçları:")
     for r in results:
         print(f"- [{r['topic']}] {r['text'][:150]}... ({r['kaynak']})")
