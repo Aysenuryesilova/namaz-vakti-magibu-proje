@@ -30,8 +30,8 @@ Sistem iki ana çalıştırma modundan oluşmaktadır:
                                     |
                                     v
                   +-----------------------------------+
-                  | Ödev 1: Custom Jinja2 Template /  |
-                  | ReAct Loop (Role & Tools JSON)    |
+                  | ReAct Loop & Chat Template        |
+                  | (Role & Tools JSON Entegrasyonu)  |
                   +-----------------------------------+
                                     |
                                     v
@@ -86,7 +86,7 @@ namaz-vakti-magibu-proje/
 │
 ├── src/                              # 🌐 Gradio UI, Jinja2 Template & SQLite Modülü
 │   ├── app.py                        # Gradio Web Arayüzü
-│   ├── chat_template.jinja           # Ödev 1: Custom Jinja2 Chat Template
+│   ├── chat_template.jinja           # Custom Jinja2 Chat Template
 │   ├── islamic_assistant.db          # SQLite Soru-Cevap veritabanı
 │   └── requirements.txt              # Gradio web bağımlılıkları
 │
@@ -95,47 +95,7 @@ namaz-vakti-magibu-proje/
 
 ---
 
-## 📜 4. Ödev 1: Custom Jinja2 Chat Template Yapısı
-
-`src/chat_template.jinja` dosyamız, Hugging Face model standartlarıyla birebir uyumludur:
-
-```jinja
-{%- if messages[0]['role'] == 'system' -%}
-    {{- "<|im_start|>system\n" + messages[0]['content'] | trim -}}
-    {%- set loop_messages = messages[1:] -%}
-{%- else -%}
-    {{- "<|im_start|>system\nSen yetkin bir Dini İlimler ve Fıkıh Asistanısın..." -}}
-    {%- set loop_messages = messages -%}
-{%- endif -%}
-
-{%- if tools is defined and tools -%}
-    {{- "\n\nKullanılabilir Araçlar (Tools):\n" -}}
-    {{- tools | tojson(indent=2) -}}
-    {{- "\nFonksiyon çağırmak istediğinde çıktını şu formatta üret: <tool_call>{\"name\": \"fonksiyon_adi\", \"arguments\": {...}}</tool_call>" -}}
-{%- endif -%}
-
-{{- "<|im_end|>\n" -}}
-
-{%- for message in loop_messages -%}
-    {%- if message['role'] == 'user' -%}
-        {{- "<|im_start|>user\n" + message['content'] | trim + "<|im_end|>\n" -}}
-    {%- elif message['role'] == 'assistant' -%}
-        {{- "<|im_start|>assistant\n" + message['content'] | trim + "<|im_end|>\n" -}}
-    {%- elif message['role'] == 'tool_call' -%}
-        {{- "<|im_start|>tool_call\n" + message['content'] | trim + "<|im_end|>\n" -}}
-    {%- elif message['role'] in ['tool', 'tool_response'] -%}
-        {{- "<|im_start|>tool_response\n" + message['content'] | trim + "<|im_end|>\n" -}}
-    {%- endif -%}
-{%- endfor -%}
-
-{%- if add_generation_prompt -%}
-    {{- "<|im_start|>assistant\n" -}}
-{%- endif -%}
-```
-
----
-
-## 🚀 5. Projeyi Çalıştırma Adımları
+## 🚀 4. Projeyi Çalıştırma Adımları
 
 ### 1. Depoyu Klonlayın
 ```bash
@@ -165,7 +125,7 @@ python index_islamic.py --file diyanet_ilmihali.txt
 
 ---
 
-## 🌐 6. Canlı Demo & Bağlantılar
+## 🌐 5. Canlı Demo & Bağlantılar
 
 - **Hugging Face Space Live Demo**: [https://huggingface.co/spaces/Aysenur44/ezan-vakti-ai-assistant](https://huggingface.co/spaces/Aysenur44/ezan-vakti-ai-assistant)
 - **GitHub Kaynak Kodu**: [https://github.com/Aysenuryesilova/namaz-vakti-magibu-proje](https://github.com/Aysenuryesilova/namaz-vakti-magibu-proje)
@@ -174,7 +134,7 @@ python index_islamic.py --file diyanet_ilmihali.txt
 
 ---
 
-## 🛡️ 7. Halüsinasyon Engelleme ve Sıfır Maliyet Yaklaşımı
+## 🛡️ 6. Halüsinasyon Engelleme ve Sıfır Maliyet Yaklaşımı
 
 - **Halüsinasyon Engelleme**: Asistan; namaz vakitleri, kıble açısı, Kur'an mealleri veya ilmihal sorularında kendi zihninden uydurma yapmaz. Yanıtlar strictly API ve ChromaDB RAG nesnelerinden formatlanır.
 - **Maliyetsiz İstemci Mimarisi**: Hugging Face Spaces üzerinde GPU/CPU kısıtlamalarına takılmadan Aladhan REST API ve SQLite/ChromaDB motoruyla kesintisiz ve %100 ücretsiz çalışır.
