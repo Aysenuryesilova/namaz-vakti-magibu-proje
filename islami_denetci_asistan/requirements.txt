@@ -1,10 +1,13 @@
 # ==============================================================================
 # İSLÂMİ UYGULAMA DOĞRULUK DENETÇİSİ - KÜTÜPHANE BAĞIMLILIKLARI (REQUIREMENTS)
 # ==============================================================================
-# Bu dosya, projemizin çalışması için gerekli dış Python kütüphanelerini listeler.
 # Yüklemek için terminalde: pip install -r requirements.txt
 
-requests>=2.31.0      # Ollama API'si ve web/Hadis API'lerine HTTP isteği (POST/GET) atmak için
-adhanpy>=1.0.4        # Namaz vakitlerini Diyanet, ISNA, MWL vb. yöntemlerle astronomik hesaplayan kütüphane
-hijri-converter>=2.3.1 # Miladi takvim ile Hicri takvim (Umm al-Qura) arasında hatasız tarih dönüşümü için
-chromadb>=0.4.24      # Vektör veritabanı (RAG katmanında fıkhi kuralları ve dokümanları vektör olarak saklar)
+requests>=2.31.0        # HTTP API istekleri (Aladhan, Geocoding, Hadis API)
+adhanpy>=1.0.4          # Namaz vakitleri astronomik hesaplama
+hijri-converter>=2.3.1   # Miladi-Hicri takvim dönüşümü
+chromadb>=0.4.24        # Vektör veritabanı (RAG İlmihal & Kelam Bilgi Bankası)
+gradio>=4.0.0           # 3 Sekmeli Modern Web Arayüzü (Chat, Trace Logs, DB Viewer)
+rich>=13.0.0            # Zengin CLI Terminal Arayüzü (Renkli paneller ve loglar)
+duckduckgo_search>=5.0.0 # Canlı Web İslami Arama Sağlayıcısı
+ollama>=0.1.0           # Yerel LLM Ollama Python SDK İstemcisi

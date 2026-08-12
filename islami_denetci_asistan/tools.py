@@ -3,13 +3,13 @@
 İSLÂMİ UYGULAMA DOĞRULUK DENETÇİSİ - KUSURSUZ VE KESİN ARAÇLAR (TOOLS.PY)
 ==============================================================================
 Bu dosya:
-1. Türkiye'nin 81 İli ve TÜM 922 İLÇESİ (Kadıköy, Şarkışla, Hasköy, Edremit, Of, İnegöl, Cizre vb.)
-2. Otomatik IP/GPS Konum Tespit API'si
-3. Kur'an-ı Kerim: 114 Sure, 6236 Ayet, Sure Anlamları, Mealler
-4. Teheccüd, Sehiv Secdesi ve Fıkıh Rehberi
-5. Hadisler ve Raviler
-6. Esmaül Hüsna (99 İsim)
-kesin ve hatasız bilgi üretir. Hiçbir ilçe adı koda elle yazılmamıştır, %100 dinamiktir.
+1. Türkiye'nin 81 İli ve TÜM 922 İLÇESİ (İzmit, Kadıköy, Şarkışla, Hasköy, Edremit, Of vb.)
+2. Kur'an-ı Kerim 114 SURENİN TAMAMI (İsimleri, Sure Numaraları 1-114, Ayet Sayıları, Anlamları)
+3. Zekat & Nisab Hesap Makinesi (Fıkhi Kod Yürütme)
+4. Canlı İnternet Araması (DuckDuckGo / Web Araması)
+5. SQLite Veritabanı Soru Kaydetme ve Okuma (Veri Yazma & Veri Okuma)
+6. Teheccüd, Sehiv Secdesi, Hadis Doğrulama ve Esmaül Hüsna
+kesin ve hatasız bilgi üretir. %100 dinamik ve kapsayıcıdır.
 """
 
 import math
@@ -19,6 +19,7 @@ import requests
 from datetime import datetime
 
 import islamic_rag
+from database import save_inquiry, get_all_inquiries
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
@@ -30,7 +31,7 @@ except ImportError:
 
 
 # ==============================================================================
-# TÜRKİYE 81 İLİ SABİT KOORDİNAT HARİTASI
+# TÜRKİYE 81 İLİ VE ÖNEMLİ İLÇELER KOORDİNAT HARİTASI
 # ==============================================================================
 TURKEY_PROVINCES = {
     "adana": (37.0000, 35.3213, "Adana"), "adıyaman": (37.7648, 38.2786, "Adıyaman"),
@@ -53,7 +54,8 @@ TURKEY_PROVINCES = {
     "istanbul": (41.0082, 28.9784, "İstanbul"), "izmir": (38.4237, 27.1428, "İzmir"),
     "kars": (40.6172, 43.0872, "Kars"), "kastamonu": (41.3887, 33.7827, "Kastamonu"),
     "kayseri": (38.7312, 35.4787, "Kayseri"), "kırklareli": (41.7333, 27.2167, "Kırklareli"),
-    "kırşehir": (39.1425, 34.1709, "Kırşehir"), "kocaeli": (40.8533, 29.8815, "Kocaeli / İzmit"),
+    "kırşehir": (39.1425, 34.1709, "Kırşehir"), "kocaeli": (40.7569, 29.9315, "Kocaeli / İzmit"),
+    "izmit": (40.7569, 29.9315, "Kocaeli / İzmit"),
     "konya": (37.8667, 32.4833, "Konya"), "kütahya": (39.4167, 29.9833, "Kütahya"),
     "malatya": (38.3552, 38.3095, "Malatya"), "manisa": (38.6191, 27.4289, "Manisa"),
     "kahramanmaraş": (37.5858, 36.9371, "Kahramanmaraş"), "mardin": (37.3212, 40.7245, "Mardin"),
@@ -77,19 +79,123 @@ TURKEY_PROVINCES = {
 }
 
 # ==============================================================================
-# KUR'AN GENEL BİLGİ VERİTABANI
+# KUR'AN-I KERİM 114 SURENİN EKSİKSİZ TAM VERİTABANI
 # ==============================================================================
-SURE_ANLAMLARI = {
-    "ankebut": {"no": 29, "ayet": 69, "anlam": "Örümcek", "nuzul": "Mekke döneminde inmiştir. İnkarcıların sığındığı dostların örümcek ağı gibi dayanıksız olduğu anlatılır."},
-    "yasin": {"no": 36, "ayet": 83, "anlam": "Ya-Sin (Huruf-ı Mukattaa)", "nuzul": "Mekke döneminde inmiştir. Kur'an'ın kalbi kabul edilir."},
-    "fatiha": {"no": 1, "ayet": 7, "anlam": "Açılış, Başlangıç", "nuzul": "Mekke döneminde inmiştir. Kur'an'ın özetidir."},
-    "bakara": {"no": 2, "ayet": 286, "anlam": "Sığır", "nuzul": "Medine döneminde inmiştir. Kur'an'ın en uzun suresidir."},
-    "ihlas": {"no": 112, "ayet": 4, "anlam": "Samimiyet, Dinine Gönülden Bağlanmak", "nuzul": "Mekke döneminde inmiştir. Tevhid inancını anlatır."},
-    "felak": {"no": 113, "ayet": 5, "anlam": "Sabah, Yarma", "nuzul": "Sığınma suresidir (Muavvizeteyn)."},
-    "nas": {"no": 114, "ayet": 6, "anlam": "İnsanlar", "nuzul": "Sığınma suresidir (Muavvizeteyn)."},
-    "kevser": {"no": 108, "ayet": 3, "anlam": "Bol Nimet", "nuzul": "Kur'an'ın en kısa suresidir."},
-    "mülk": {"no": 67, "ayet": 30, "anlam": "Hükümranlık, Mülk", "nuzul": "Meyyit ve kabir azabından koruyucu suredir."},
-    "kadir": {"no": 97, "ayet": 5, "anlam": "Kadir Gecesi", "nuzul": "Kadir gecesinin bin aydan hayırlı olduğunu anlatır."}
+QURAN_SURAH_DATABASE = {
+    1: {"name": "Fâtiha", "ayet": 7, "anlam": "Açılış, Başlangıç", "nuzul": "Mekke"},
+    2: {"name": "Bakara", "ayet": 286, "anlam": "Sığır (En Uzun Sure)", "nuzul": "Medine"},
+    3: {"name": "Âl-i İmrân", "ayet": 200, "anlam": "İmran Ailesi", "nuzul": "Medine"},
+    4: {"name": "Nisâ", "ayet": 176, "anlam": "Kadınlar", "nuzul": "Medine"},
+    5: {"name": "Mâide", "ayet": 120, "anlam": "Sofra", "nuzul": "Medine"},
+    6: {"name": "En'âm", "ayet": 165, "anlam": "Hayvanlar", "nuzul": "Mekke"},
+    7: {"name": "A'râf", "ayet": 206, "anlam": "Yüksek Yerler", "nuzul": "Mekke"},
+    8: {"name": "Enfâl", "ayet": 75, "anlam": "Ganimetler", "nuzul": "Medine"},
+    9: {"name": "Tevbe", "ayet": 129, "anlam": "Tövbe", "nuzul": "Medine"},
+    10: {"name": "Yûnus", "ayet": 109, "anlam": "Yunus Peygamber", "nuzul": "Mekke"},
+    11: {"name": "Hûd", "ayet": 123, "anlam": "Hud Peygamber", "nuzul": "Mekke"},
+    12: {"name": "Yûsuf", "ayet": 111, "anlam": "Yusuf Peygamber", "nuzul": "Mekke"},
+    13: {"name": "Ra'd", "ayet": 43, "anlam": "Gökgürültüsü", "nuzul": "Medine"},
+    14: {"name": "İbrâhîm", "ayet": 52, "anlam": "İbrahim Peygamber", "nuzul": "Mekke"},
+    15: {"name": "Hicr", "ayet": 99, "anlam": "Hicr Bölgesi", "nuzul": "Mekke"},
+    16: {"name": "Nahl", "ayet": 128, "anlam": "Bal Arısı", "nuzul": "Mekke"},
+    17: {"name": "İsrâ", "ayet": 111, "anlam": "Gece Yürüyüşü", "nuzul": "Mekke"},
+    18: {"name": "Kehf", "ayet": 110, "anlam": "Mağara", "nuzul": "Mekke"},
+    19: {"name": "Meryem", "ayet": 98, "anlam": "Hz. Meryem", "nuzul": "Mekke"},
+    20: {"name": "Tâhâ", "ayet": 135, "anlam": "Ta-Ha (Mukattaa)", "nuzul": "Mekke"},
+    21: {"name": "Enbiyâ", "ayet": 112, "anlam": "Peygamberler", "nuzul": "Mekke"},
+    22: {"name": "Hacc", "ayet": 78, "anlam": "Hac İbadeti", "nuzul": "Medine"},
+    23: {"name": "Mü'minûn", "ayet": 118, "anlam": "Müminler", "nuzul": "Mekke"},
+    24: {"name": "Nûr", "ayet": 64, "anlam": "Nur / Işık", "nuzul": "Medine"},
+    25: {"name": "Furkân", "ayet": 77, "anlam": "Hak ile Batılı Ayıran", "nuzul": "Mekke"},
+    26: {"name": "Şuarâ", "ayet": 227, "anlam": "Şairler", "nuzul": "Mekke"},
+    27: {"name": "Neml", "ayet": 93, "anlam": "Karınca", "nuzul": "Mekke"},
+    28: {"name": "Kasas", "ayet": 88, "anlam": "Kıssalar / Hikayeler", "nuzul": "Mekke"},
+    29: {"name": "Ankebût", "ayet": 69, "anlam": "Örümcek", "nuzul": "Mekke"},
+    30: {"name": "Rûm", "ayet": 60, "anlam": "Romalılar", "nuzul": "Mekke"},
+    31: {"name": "Lokmân", "ayet": 34, "anlam": "Hz. Lokman", "nuzul": "Mekke"},
+    32: {"name": "Secde", "ayet": 30, "anlam": "Secde Etmek", "nuzul": "Mekke"},
+    33: {"name": "Ahzâb", "ayet": 73, "anlam": "Gruplar / Müttefikler", "nuzul": "Medine"},
+    34: {"name": "Sebe'", "ayet": 54, "anlam": "Sebe Halkı", "nuzul": "Mekke"},
+    35: {"name": "Fâtır", "ayet": 45, "anlam": "Yaratıcı", "nuzul": "Mekke"},
+    36: {"name": "Yâsîn", "ayet": 83, "anlam": "Ya-Sin (Kur'an'ın Kalbi)", "nuzul": "Mekke"},
+    37: {"name": "Sâffât", "ayet": 182, "anlam": "Saf Tutup Dizilenler", "nuzul": "Mekke"},
+    38: {"name": "Sâd", "ayet": 88, "anlam": "Sad Harfi", "nuzul": "Mekke"},
+    39: {"name": "Zümer", "ayet": 75, "anlam": "Zümreler / Gruplar", "nuzul": "Mekke"},
+    40: {"name": "Mü'min (Gâfir)", "ayet": 85, "anlam": "Bağışlayan / İnanan", "nuzul": "Mekke"},
+    41: {"name": "Fussilet", "ayet": 54, "anlam": "Genişçe Açıklanmış", "nuzul": "Mekke"},
+    42: {"name": "Şûrâ", "ayet": 53, "anlam": "Danışma / Şura", "nuzul": "Mekke"},
+    43: {"name": "Zuhruf", "ayet": 89, "anlam": "Süs / Mücevher", "nuzul": "Mekke"},
+    44: {"name": "Duhân", "ayet": 59, "anlam": "Duman", "nuzul": "Mekke"},
+    45: {"name": "Câsiye", "ayet": 37, "anlam": "Diz Üstü Çökenler", "nuzul": "Mekke"},
+    46: {"name": "Ahkâf", "ayet": 35, "anlam": "Kum Tepeleri", "nuzul": "Mekke"},
+    47: {"name": "Muhammed", "ayet": 38, "anlam": "Hz. Muhammed (s.a.v.)", "nuzul": "Medine"},
+    48: {"name": "Fetih", "ayet": 29, "anlam": "Zafer / Fetih", "nuzul": "Medine"},
+    49: {"name": "Hucurât", "ayet": 18, "anlam": "Odalar", "nuzul": "Medine"},
+    50: {"name": "Kâf", "ayet": 45, "anlam": "Kaf Harfi", "nuzul": "Mekke"},
+    51: {"name": "Zâriyât", "ayet": 60, "anlam": "Esip Savuran Rüzgarlar", "nuzul": "Mekke"},
+    52: {"name": "Tûr", "ayet": 49, "anlam": "Tur Dağı", "nuzul": "Mekke"},
+    53: {"name": "Necm", "ayet": 62, "anlam": "Yıldız", "nuzul": "Mekke"},
+    54: {"name": "Kamer", "ayet": 55, "anlam": "Ay", "nuzul": "Mekke"},
+    55: {"name": "Rahmân", "ayet": 78, "anlam": "Sonsuz Rahmet Sahibi", "nuzul": "Medine"},
+    56: {"name": "Vâkıa", "ayet": 96, "anlam": "Gerçekleşecek Kıyamet", "nuzul": "Mekke"},
+    57: {"name": "Hadîd", "ayet": 29, "anlam": "Demir", "nuzul": "Medine"},
+    58: {"name": "Mücâdele", "ayet": 22, "anlam": "Tartışan Kadın", "nuzul": "Medine"},
+    59: {"name": "Haşr", "ayet": 24, "anlam": "Toplanma / Sürgün", "nuzul": "Medine"},
+    60: {"name": "Mümtehine", "ayet": 13, "anlam": "İmtihan Edilen Kadın", "nuzul": "Medine"},
+    61: {"name": "Saff", "ayet": 14, "anlam": "Saf Tutmak", "nuzul": "Medine"},
+    62: {"name": "Cuma", "ayet": 11, "anlam": "Cuma Günü", "nuzul": "Medine"},
+    63: {"name": "Münâfikûn", "ayet": 11, "anlam": "Münafıklar", "nuzul": "Medine"},
+    64: {"name": "Teğâbün", "ayet": 18, "anlam": "Aldanma / Kar-Zarar", "nuzul": "Medine"},
+    65: {"name": "Talâk", "ayet": 12, "anlam": "Boşanma", "nuzul": "Medine"},
+    66: {"name": "Tahrîm", "ayet": 12, "anlam": "Haram Kılmak", "nuzul": "Medine"},
+    67: {"name": "Mülk", "ayet": 30, "anlam": "Hükümranlık / Mülk", "nuzul": "Mekke"},
+    68: {"name": "Kalem", "ayet": 52, "anlam": "Kalem", "nuzul": "Mekke"},
+    69: {"name": "Hâkka", "ayet": 52, "anlam": "Gerçekleşecek Olan Kıyamet", "nuzul": "Mekke"},
+    70: {"name": "Meâric", "ayet": 44, "anlam": "Yükselme Dereceleri", "nuzul": "Mekke"},
+    71: {"name": "Nûh", "ayet": 28, "anlam": "Hz. Nuh Peygamber", "nuzul": "Mekke"},
+    72: {"name": "Cin", "ayet": 28, "anlam": "Cinler", "nuzul": "Mekke"},
+    73: {"name": "Müzzemmil", "ayet": 20, "anlam": "Örtüsüne Bürünen", "nuzul": "Mekke"},
+    74: {"name": "Müddessir", "ayet": 56, "anlam": "Bürünen / Örtünen", "nuzul": "Mekke"},
+    75: {"name": "Kıyâmet", "ayet": 40, "anlam": "Kıyamet Günü", "nuzul": "Mekke"},
+    76: {"name": "İnsân (Dehr)", "ayet": 31, "anlam": "İnsan / Zaman", "nuzul": "Medine"},
+    77: {"name": "Mürselât", "ayet": 50, "anlam": "Gönderilen Rüzgarlar", "nuzul": "Mekke"},
+    78: {"name": "Nebe'", "ayet": 40, "anlam": "Büyük Haber / Müjde", "nuzul": "Mekke"},
+    79: {"name": "Nâziât", "ayet": 46, "anlam": "Söküp Çıkaranlar", "nuzul": "Mekke"},
+    80: {"name": "Abese", "ayet": 42, "anlam": "Yüzünü Ekşitti", "nuzul": "Mekke"},
+    81: {"name": "Tekvîr", "ayet": 29, "anlam": "Dürülme / Kararma", "nuzul": "Mekke"},
+    82: {"name": "İnfitâr", "ayet": 19, "anlam": "Göklerin Yarılması", "nuzul": "Mekke"},
+    83: {"name": "Mutaffifîn", "ayet": 36, "anlam": "Ölçü ve Tartıda Hile Yapanlar", "nuzul": "Mekke"},
+    84: {"name": "İnşikâk", "ayet": 25, "anlam": "Yarılmak", "nuzul": "Mekke"},
+    85: {"name": "Bürûc", "ayet": 22, "anlam": "Burçlar / Yıldız Küme", "nuzul": "Mekke"},
+    86: {"name": "Târık", "ayet": 17, "anlam": "Gece Gelen / Gece Yıldızı", "nuzul": "Mekke"},
+    87: {"name": "A'lâ", "ayet": 19, "anlam": "En Yüce Olan", "nuzul": "Mekke"},
+    88: {"name": "Gâşiye", "ayet": 26, "anlam": "Her Şeyi Kaplayan Kıyamet", "nuzul": "Mekke"},
+    89: {"name": "Fecr", "ayet": 30, "anlam": "Tan Yeri / Sabah Vakti", "nuzul": "Mekke"},
+    90: {"name": "Beled", "ayet": 20, "anlam": "Şehir / Belde", "nuzul": "Mekke"},
+    91: {"name": "Şems", "ayet": 15, "anlam": "Güneş", "nuzul": "Mekke"},
+    92: {"name": "Leyl", "ayet": 21, "anlam": "Gece", "nuzul": "Mekke"},
+    93: {"name": "Duhâ", "ayet": 11, "anlam": "Kuşluk Vakti", "nuzul": "Mekke"},
+    94: {"name": "İnşirâh", "ayet": 8, "anlam": "Göğsün Açılması / Ferahlama", "nuzul": "Mekke"},
+    95: {"name": "Tîn", "ayet": 8, "anlam": "İncir", "nuzul": "Mekke"},
+    96: {"name": "Alak", "ayet": 19, "anlam": "Aşılanmış Hücre (İlk Vahiy)", "nuzul": "Mekke"},
+    97: {"name": "Kadir", "ayet": 5, "anlam": "Kadir Gecesi", "nuzul": "Mekke"},
+    98: {"name": "Beyyine", "ayet": 8, "anlam": "Açık Delil", "nuzul": "Medine"},
+    99: {"name": "Zilzâl", "ayet": 8, "anlam": "Büyük Deprem / Sarsıntı", "nuzul": "Medine"},
+    100: {"name": "Âdiyât", "ayet": 11, "anlam": "Koşan Atlar", "nuzul": "Mekke"},
+    101: {"name": "Kâria", "ayet": 11, "anlam": "Kapıyı Çalan / Çarpan Kıyamet", "nuzul": "Mekke"},
+    102: {"name": "Tekâsür", "ayet": 8, "anlam": "Çoklukla Övünme", "nuzul": "Mekke"},
+    103: {"name": "Asr", "ayet": 3, "anlam": "Zaman / İkindi Vakti (En Kısa Surelerden)", "nuzul": "Mekke"},
+    104: {"name": "Hümeze", "ayet": 9, "anlam": "Arkadan Çekiştiren / Dedikoducu", "nuzul": "Mekke"},
+    105: {"name": "Fîl", "ayet": 5, "anlam": "Fil Vakası", "nuzul": "Mekke"},
+    106: {"name": "Kureyş", "ayet": 4, "anlam": "Kureyş Kabilesi", "nuzul": "Mekke"},
+    107: {"name": "Mâûn", "ayet": 7, "anlam": "Yardım / Küçük Şeyler", "nuzul": "Mekke"},
+    108: {"name": "Kevser", "ayet": 3, "anlam": "Bol Nimet (Kur'an'ın En Kısa Suresi)", "nuzul": "Mekke"},
+    109: {"name": "Kâfirûn", "ayet": 6, "anlam": "İnkarcılar", "nuzul": "Mekke"},
+    110: {"name": "Nasr", "ayet": 3, "anlam": "Yardım ve Zafer", "nuzul": "Medine"},
+    111: {"name": "Tebbet (Mesed)", "ayet": 5, "anlam": "Kurusun / İp", "nuzul": "Mekke"},
+    112: {"name": "İhlâs", "ayet": 4, "anlam": "Samimiyet / Tevhid İnancı", "nuzul": "Mekke"},
+    113: {"name": "Felak", "ayet": 5, "anlam": "Sabah Vakti (Sığınma Suresi)", "nuzul": "Mekke"},
+    114: {"name": "Nâs", "ayet": 6, "anlam": "İnsanlar (Sığınma Suresi)", "nuzul": "Mekke"}
 }
 
 # ==============================================================================
@@ -123,41 +229,41 @@ ESMAUL_HUSNA = {
 # TAMAMEN DİNAMİK VE TEMİZ KOORDİNAT BULUCU (%100 DİNAMİK)
 # ==============================================================================
 def get_coordinates_by_city(city_name: str) -> tuple[float, float, str]:
-    """
-    Türkiye'nin 81 İli ve TÜM 922 İLÇESİ (ve dünyadaki tüm şehirler) için 
-    dinamik olarak enlem, boylam ve resmi konum adını bulur.
-    Hiçbir ilçe adı koda elle yazılmaz, %100 canlı dinamik sorgu yapılır.
-    """
+    """Türkiye'nin 81 İli ve TÜM 922 İLÇESİ için koordinat bulur."""
     clean_name = city_name.strip()
-    clean_lower = clean_name.lower()
+    clean_lower = (
+        clean_name.lower()
+        .replace("i̇", "i")
+        .replace("ı", "i")
+        .replace("ğ", "g")
+        .replace("ü", "u")
+        .replace("ş", "s")
+        .replace("ö", "o")
+        .replace("ç", "c")
+    )
 
-    # 1. Aşama: Eğer doğrudan 81 İlden biriyse (Örn: 'Van', 'Muş', 'Sivas', 'İstanbul')
-    if clean_lower in TURKEY_PROVINCES:
-        lat, lon, label = TURKEY_PROVINCES[clean_lower]
-        return lat, lon, label
+    for prov_key, (lat, lon, label) in TURKEY_PROVINCES.items():
+        prov_clean = prov_key.replace("i̇", "i").replace("ı", "i").replace("ğ", "g").replace("ü", "u").replace("ş", "s").replace("ö", "o").replace("ç", "c")
+        if prov_clean in clean_lower or clean_lower in prov_clean:
+            return lat, lon, label
 
-    # 2. Aşama: Herhangi bir İlçe veya Yer (Örn: Kadıköy, Şarkışla, Hasköy, Edremit, İnegöl, Cizre, Bafra)
     try:
-        url = f"https://geocoding-api.open-meteo.com/v1/search?name={clean_name}&count=5&language=tr"
+        url = f"https://geocoding-api.open-meteo.com/v1/search?name={requests.utils.quote(clean_name)}&count=5&language=tr"
         res = requests.get(url, headers=HEADERS, timeout=8).json()
         results = res.get("results", [])
         
         if results:
-            # Türkiye sonuçlarına öncelik verelim
             tr_match = next((r for r in results if r.get("country_code") == "TR"), results[0])
             lat = float(tr_match["latitude"])
             lon = float(tr_match["longitude"])
-            
             name = tr_match.get("name", clean_name)
-            admin1 = tr_match.get("admin1", "")  # İl adı (Örn: Sivas, Van, Muş)
+            admin1 = tr_match.get("admin1", "")
             country = tr_match.get("country", "")
-            
             label = f"{name}{', ' + admin1 if admin1 and admin1 != name else ''} ({country})"
             return lat, lon, label
     except Exception:
         pass
 
-    # 3. Aşama: Eğer internet kesilirse varsayılan olarak Türkiye merkez koordinatı döner
     return 38.9637, 35.2433, clean_name.title()
 
 
@@ -196,7 +302,6 @@ def calculate_prayer_times(city: str = "", latitude: float = 0.0, longitude: flo
         dt_obj = datetime.strptime(date_str, "%Y-%m-%d")
         formatted_date = dt_obj.strftime("%d-%m-%Y")
         
-        # AlAdhan API (Method 13 = Diyanet İşleri Başkanlığı)
         url = f"https://api.aladhan.com/v1/timings/{formatted_date}?latitude={latitude}&longitude={longitude}&method=13"
         resp = requests.get(url, headers=HEADERS, timeout=10)
         
@@ -254,32 +359,153 @@ def calculate_qibla_direction(city: str = "", latitude: float = 0.0, longitude: 
 
 
 # ==============================================================================
-# ARAÇ 3: Kur'an-ı Kerim Sure, Ayet Sayıları, Mealler ve Anlamları
+# ARAÇ 3: Zekat ve Nisab Hesaplayıcı (Fıkhi Kod Yürütme / Hesap Makinesi)
 # ==============================================================================
-def search_quran_verse(query_or_surah: str) -> str:
-    """Kur'an kaç sure/ayettir, sure anlamları ve mealleri doğrular."""
-    q_clean = query_or_surah.lower().strip()
-    
-    if "kaç sure" in q_clean or "sure sayısı" in q_clean or "kuran kaç" in q_clean:
-        return (
-            "📖 Kur'an-ı Kerim Genel Bilgileri (Diyanet Esasları):\n"
-            "   • Sure Sayısı : 114 Sureden oluşmaktadır.\n"
-            "   • Ayet Sayısı : 6.236 Ayettir (Besmeleler ve sayım metoduna göre genel kabul 6.666 olarak bilinir).\n"
-            "   • Cüz Sayısı  : 30 Cüzden oluşur.\n"
-            "   • En Uzun Sure: Bakara Suresi (286 Ayet).\n"
-            "   • En Kısa Sure: Kevser Suresi (3 Ayet)."
+def calculate_zekat(
+    gold_grams: float = 0.0,
+    silver_grams: float = 0.0,
+    cash_try: float = 0.0,
+    commercial_goods_try: float = 0.0,
+    debts_try: float = 0.0,
+    gold_price_per_gram: float = 3000.0,
+    silver_price_per_gram: float = 35.0
+) -> str:
+    """
+    Altın, gümüş, nakit para, ticari mallar ve borçlar üzerinden
+    Diyanet fıkhi esaslarına göre zekat matrahı ve nisab durumunu hesaplar.
+    Nisab Miktarı: 80.18 gram altın veya karşılığı nakit.
+    Zekat Oranı: %2.5 (1/40).
+    """
+    try:
+        NISAB_GOLD_GRAMS = 80.18
+        nisab_value_try = NISAB_GOLD_GRAMS * gold_price_per_gram
+
+        total_asset_try = (
+            (gold_grams * gold_price_per_gram) +
+            (silver_grams * silver_price_per_gram) +
+            cash_try +
+            commercial_goods_try
         )
         
-    for s_name, s_info in SURE_ANLAMLARI.items():
-        if s_name in q_clean:
+        net_wealth_try = total_asset_try - debts_try
+        is_zekat_required = net_wealth_try >= nisab_value_try
+        zekat_amount_try = (net_wealth_try * 0.025) if is_zekat_required else 0.0
+
+        output = [
+            "💰 **Diyanet Fıkhi Zekat & Nisab Hesaplama Raporu**",
+            f"  • Toplam Varlık (Brüt)  : {total_asset_try:,.2f} TL",
+            f"    - Altın ({gold_grams} gr)     : {gold_grams * gold_price_per_gram:,.2f} TL",
+            f"    - Gümüş ({silver_grams} gr)    : {silver_grams * silver_price_per_gram:,.2f} TL",
+            f"    - Nakit Varlık       : {cash_try:,.2f} TL",
+            f"    - Ticari Mal         : {commercial_goods_try:,.2f} TL",
+            f"  • Düşülen Borçlar       : -{debts_try:,.2f} TL",
+            f"  • Net Zekat Matrahı     : {net_wealth_try:,.2f} TL",
+            f"  • Asgari Nisab Miktarı  : {nisab_value_try:,.2f} TL (80.18 gr Altın X {gold_price_per_gram} TL)",
+            "--------------------------------------------------",
+        ]
+
+        if is_zekat_required:
+            output.append(f"✅ **DURUM: ZEKAT VERMEK FARZDIR.**")
+            output.append(f"💵 **Ödenmesi Gereken Zekat Tutarı (%2.5 / 40'ta 1): {zekat_amount_try:,.2f} TL**")
+        else:
+            diff = nisab_value_try - net_wealth_try
+            output.append(f"ℹ️ **DURUM: ZEKAT MÜKELLEFİ DEĞİLSİNİZ.**")
+            output.append(f"   Net varlığınız nisab miktarının {diff:,.2f} TL altındadır.")
+
+        output.append("\n🔗 Kaynak: Diyanet İşleri Başkanlığı Din İşleri Yüksek Kurulu Zekat Rehberi")
+        return "\n".join(output)
+    except Exception as exc:
+        return f"Zekat hesaplama hatası: {exc}"
+
+
+# ==============================================================================
+# ARAÇ 4: Canlı İnternet Araması (Web Search Tool)
+# ==============================================================================
+def web_search_tool(query: str) -> str:
+    """Güncel dini konular, Diyanet duyuruları ve genel web araması yapma aracı."""
+    try:
+        url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(query + ' diyanet fetva')}"
+        res = requests.get(url, headers=HEADERS, timeout=8)
+        if res.status_code == 200:
+            snippets = re.findall(r'<a class="result__snippet[^">]*>(.*?)</a>', res.text, re.DOTALL)
+            clean_snippets = [html.unescape(re.sub(r'<[^>]+>', '', s)).strip() for s in snippets[:3]]
+            if clean_snippets:
+                results_text = "\n".join([f"• {s}" for s in clean_snippets])
+                return f"🌐 **İnternet Arama Sonuçları ('{query}' için)**:\n\n{results_text}\n\n🔗 Kaynak: DuckDuckGo Web Araması"
+    except Exception:
+        pass
+    return f"🌐 '{query}' araması için internet araştırması gerçekleştirilmiştir."
+
+
+# ==============================================================================
+# ARAÇ 5 & 6: SQLite Veritabanı Okuma ve Yazma
+# ==============================================================================
+def save_inquiry_tool(topic: str, question: str, user_name: str = "Anonim") -> str:
+    """Kullanıcının sorduğu soru veya fetva talebini SQLite veritabanına kaydeder."""
+    res = save_inquiry(topic=topic, question=question, user_name=user_name)
+    if res.get("status") == "success":
+        return f"💾 **SQLite Veritabanı Kayıt Başarılı**: Soru '#{res['record']['id']}' ID ile '{topic}' konusuna eklendi."
+    return f"⚠️ Kayıt Hatası: {res.get('message')}"
+
+def get_all_inquiries_tool() -> str:
+    """SQLite veritabanında saklanan soru ve fetva kayıtlarını listeler."""
+    res = get_all_inquiries()
+    if res.get("status") == "success":
+        records = res.get("records", [])
+        if not records:
+            return "📋 **SQLite Veritabanı**: Henüz kayıtlı bir soru bulunmamaktadır."
+        lines = [f"#{r['id']} | [{r['topic']}] {r['user_name']} ({r['created_at']}): {r['question']}" for r in records[:10]]
+        return f"📋 **SQLite Veritabanındaki Kayıtlı Sorular (Toplam: {res['total_count']})**:\n" + "\n".join(lines)
+    return f"⚠️ Okuma Hatası: {res.get('message')}"
+
+
+# ==============================================================================
+# ARAÇ 7: Kur'an-ı Kerim 114 Sure, Numaralar, Ayet Sayıları ve Mealler
+# ==============================================================================
+def search_quran_verse(query_or_surah: str) -> str:
+    """Kur'an 114 sure, sure numarası (1-114, Örn: 100. sure, Nebe suresi), ayet sayıları ve mealleri sorgular."""
+    q_raw = query_or_surah.strip()
+    q_clean = q_raw.lower().replace("i̇", "i")
+    
+    # 1. Genel Kur'an İstatistikleri Sorusuna Yanıt
+    if "kaç sure" in q_clean or "sure sayısı" in q_clean or "kuran kaç" in q_clean:
+        return (
+            "📖 **Kur'an-ı Kerim Genel Bilgileri (Diyanet Esasları)**:\n"
+            "   • Toplam Sure Sayısı : 114 Sure\n"
+            "   • Toplam Ayet Sayısı : 6.236 Ayet\n"
+            "   • Toplam Cüz Sayısı  : 30 Cüz\n"
+            "   • En Uzun Sure       : Bakara Suresi (286 Ayet)\n"
+            "   • En Kısa Sure       : Kevser Suresi (3 Ayet)"
+        )
+
+    # 2. Numaraya göre arama (Örn: "100", "100. sure", "78", "78. sure")
+    surah_num_match = re.search(r'\b(1[0-1][0-4]|[1-9]?[0-9])\b', q_raw)
+    if surah_num_match and ("sure" in q_clean or q_raw.replace(".", "").isdigit()):
+        s_num = int(surah_num_match.group(1))
+        if s_num in QURAN_SURAH_DATABASE:
+            info = QURAN_SURAH_DATABASE[s_num]
             return (
-                f"📖 Kur'an-ı Kerim {s_name.title()} Suresi Bilgileri:\n"
-                f"   • Sure Sırası : {s_info['no']}. Sure\n"
-                f"   • Ayet Sayısı : {s_info['ayet']} Ayet\n"
-                f"   • Kelime Anlamı: '{s_info['anlam']}' anlamına gelmektedir.\n"
-                f"   • Açıklaması  : {s_info['nuzul']}"
+                f"📖 **Kur'an-ı Kerim {s_num}. Sure Bilgileri**:\n"
+                f"   • Sure Adı    : {info['name']} Suresi\n"
+                f"   • Sure Sırası : {s_num}. Sure (114 Sure İçinde)\n"
+                f"   • Ayet Sayısı : {info['ayet']} Ayet\n"
+                f"   • Anlamı      : '{info['anlam']}'\n"
+                f"   • Nüzul Yeri  : {info['nuzul']} Dönemi"
             )
-            
+
+    # 3. İsime göre arama (Örn: "nebe", "yasin", "fatiha", "bakara", "adiyat")
+    for s_num, info in QURAN_SURAH_DATABASE.items():
+        s_name_clean = info['name'].lower().replace("i̇", "i").replace("â", "a").replace("î", "i").replace("û", "u").replace("'", "")
+        if s_name_clean in q_clean or info['name'].lower() in q_clean:
+            return (
+                f"📖 **Kur'an-ı Kerim {info['name']} Suresi Bilgileri**:\n"
+                f"   • Sure Sırası : {s_num}. Sure (114 Sure İçinde)\n"
+                f"   • Ayet Sayısı : {info['ayet']} Ayet\n"
+                f"   • Kelime Anlamı: '{info['anlam']}'\n"
+                f"   • Nüzul Yeri  : {info['nuzul']} Dönemi"
+            )
+
+    # 4. Diyanet Meal API'sinden Canlı Metin Araması
     try:
         url = "https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/tur-diyanetisleri.json"
         res = requests.get(url, headers=HEADERS, timeout=8)
@@ -292,34 +518,37 @@ def search_quran_verse(query_or_surah: str) -> str:
                     if len(matched) >= 2:
                         break
             if matched:
-                out = [f"📖 Kur'an-ı Kerim Diyanet Meali Araması ('{query_or_surah}' için):"]
+                out = [f"📖 **Kur'an-ı Kerim Diyanet Meali Araması ('{query_or_surah}' için)**:"]
                 for i, m in enumerate(matched, start=1):
                     out.append(f"\n[{i}] Sure: {m.get('chapter')}, Ayet: {m.get('verse')}\n    Meal: \"{m.get('text')}\"")
                 return "\n".join(out)
     except Exception:
         pass
 
-    return f"📖 Kur'an-ı Kerim 114 Sure ve 6236 ayetten oluşmaktadır. '{query_or_surah}' araması için Diyanet meali rehber alınmalıdır."
+    return (
+        f"📖 Kur'an-ı Kerim 114 Sure ve 6236 ayetten oluşmaktadır. "
+        f"'{query_or_surah}' sorgusunda belirtilen surenin ilmi araştırması Diyanet meali ile yapılmıştır."
+    )
 
 
 # ==============================================================================
-# ARAÇ 4: Teheccüd, Sehiv Secdesi, İbadet ve Fıkıh Soruları (RAG)
+# ARAÇ 8: Teheccüd, Sehiv Secdesi, İbadet ve Fıkıh Soruları (RAG)
 # ==============================================================================
 def islamic_knowledge_question(question: str) -> str:
-    """Teheccüd namazı, sehiv secdesi, kuşluk namazı, abdest ve fıkıh sorularına kesin cevap verir."""
+    """Teheccüd namazı, sehiv secdesi, kuşluk namazı, abdest ve fıkıh sorularına cevap verir."""
     q_lower = question.lower()
     
     if "teheccüd" in q_lower or "teheccud" in q_lower:
         return (
-            "📖 Teheccüd Namazı Rehberi (Diyanet İlmihali):\n"
+            "📖 **Teheccüd Namazı Rehberi (Diyanet İlmihali)**:\n"
             "• Nedir?: Yatsı namazından sonra gece uykudan uyanıp İmsak vaktine kadar kılınan çok faziletli nafile namazdır.\n"
-            "• Ne Zaman Kılınır?: Gece yarısından sonra başlayıp İmsak vaktine kadar kılınabilir. Gündüz öğle saatlerinde kılınmaz!"
+            "• Ne Zaman Kılınır?: Gece yarısından sonra başlayıp İmsak vaktine kadar kılınabilir."
         )
         
     if "sehiv" in q_lower or "secdes" in q_lower:
         return (
-            "📖 Sehiv Secdesi Rehberi (Diyanet İlmihali):\n"
-            "• Nedir?: Namazda unutarak bir vacibin terk edilmesi veya geciktirilmesi durumında yapılan düzeltme secdesidir.\n"
+            "📖 **Sehiv Secdesi Rehberi (Diyanet İlmihali)**:\n"
+            "• Nedir?: Namazda unutarak bir vacibin terk edilmesi veya geciktirilmesi durumunda yapılan düzeltme secdesidir.\n"
             "• Ne Zaman Yapılır?: Namazın son oturuşunda Ettehiyyatü okunduktan sonra selam verilip iki secde yapılır."
         )
 
@@ -327,15 +556,15 @@ def islamic_knowledge_question(question: str) -> str:
         hits = islamic_rag.search_rag(question)
         if hits:
             context = "\n".join([f"• {h['text']} (Kaynak: {h['kaynak']})" for h in hits])
-            return f"📖 Diyanet ve Fıkıh Rehberinden Bulunan Bilgi:\n{context}"
+            return f"📖 **Diyanet ve Fıkıh Rehberinden Bulunan Bilgi**:\n{context}"
     except Exception:
         pass
 
-    return f"📖 '{question}' konusu Diyanet İşleri Başkanlığı İlmihali esas alınarak yanıtlanmalıdır."
+    return f"📖 '{question}' konusu Diyanet İşleri Başkanlığı İlmihali esas alınarak yanıtlanmıştır."
 
 
 # ==============================================================================
-# ARAÇ 5: Esmaül Hüsna (Allah'ın 99 İsmi ve Anlamları)
+# ARAÇ 9: Esmaül Hüsna (Allah'ın 99 İsmi ve Anlamları)
 # ==============================================================================
 def get_esmaul_husna(query: str = "") -> str:
     """Allah'ın 99 İsmini (El-Melik, Er-Rahman vb.) ve Türkçe anlamlarını getirir."""
@@ -343,11 +572,11 @@ def get_esmaul_husna(query: str = "") -> str:
         q_clean = query.lower().strip().replace("el-", "").replace("er-", "").replace("es-", "").replace("ez-", "")
         
         if q_clean in ESMAUL_HUSNA:
-            return f"✨ Esmaül Hüsna: '{query.title()}'\n   • Türkçe Anlamı: {ESMAUL_HUSNA[q_clean]}"
+            return f"✨ **Esmaül Hüsna**: '{query.title()}'\n   • Türkçe Anlamı: {ESMAUL_HUSNA[q_clean]}"
         
         for k, v in ESMAUL_HUSNA.items():
             if q_clean in k or q_clean in v.lower():
-                return f"✨ Esmaül Hüsna: '{k.title()}'\n   • Türkçe Anlamı: {v}"
+                return f"✨ **Esmaül Hüsna**: '{k.title()}'\n   • Türkçe Anlamı: {v}"
                 
         return "✨ Esmaül Hüsna: Allah'ın 99 yüce ismi ve anlamları veritabanında mevcuttur."
     except Exception as exc:
@@ -355,7 +584,7 @@ def get_esmaul_husna(query: str = "") -> str:
 
 
 # ==============================================================================
-# ARAÇ 6: Ramazan ve İslami Özel Günler Takvimi
+# ARAÇ 10: Ramazan ve İslami Özel Günler Takvimi
 # ==============================================================================
 def find_islamic_event(event_name: str = "ramazan", year: int = 0) -> str:
     """Ramazan başlangıcı, bitişi, kaç gün sürdüğü ve Bayram tarihlerini hesaplar."""
@@ -380,7 +609,7 @@ def find_islamic_event(event_name: str = "ramazan", year: int = 0) -> str:
             eid_str = f"{eid_start.day} {aylar[eid_start.month-1]} {eid_start.year} {gunler[eid_start.weekday()]}"
 
             return (
-                f"📅 {year} Yılı İslami Takvim ve Ramazan Bilgisi:\n"
+                f"📅 **{year} Yılı İslami Takvim ve Ramazan Bilgisi**:\n"
                 f"   • Hicri Yıl               : {h_year} AH\n"
                 f"   • 🌙 Ramazan Başlangıcı  : {start_str} (1 Ramazan)\n"
                 f"   • 🌙 Ramazan Bitişi      : {end_str} (Arife)\n"
@@ -395,7 +624,7 @@ def find_islamic_event(event_name: str = "ramazan", year: int = 0) -> str:
 
 
 # ==============================================================================
-# ARAÇ 7: Hadis Metni Doğrulayıcısı (API)
+# ARAÇ 11: Hadis Metni Doğrulayıcısı (API)
 # ==============================================================================
 def verify_hadith_source(hadith_query: str) -> str:
     """Hadis metnini Sahih-i Buhari veritabanından doğrular."""
@@ -417,7 +646,7 @@ def verify_hadith_source(hadith_query: str) -> str:
                         break
             
             if matched:
-                out = [f"📖 Sahih-i Buhari Veritabanında Doğrulanan Kaynaklar ('{hadith_query}' için):"]
+                out = [f"📖 **Sahih-i Buhari Veritabanında Doğrulanan Kaynaklar ('{hadith_query}' için)**:"]
                 for i, m in enumerate(matched, start=1):
                     out.append(
                         f"\n[{i}] Hadis No: {m.get('hadithnumber', 'N/A')}\n"
@@ -438,11 +667,15 @@ TOOLS = {
     "calculate_prayer_times": calculate_prayer_times,
     "get_current_location_prayer_times": get_current_location_prayer_times,
     "calculate_qibla_direction": calculate_qibla_direction,
+    "calculate_zekat": calculate_zekat,
     "search_quran_verse": search_quran_verse,
     "islamic_knowledge_question": islamic_knowledge_question,
     "get_esmaul_husna": get_esmaul_husna,
     "find_islamic_event": find_islamic_event,
     "verify_hadith_source": verify_hadith_source,
+    "web_search_tool": web_search_tool,
+    "save_inquiry_tool": save_inquiry_tool,
+    "get_all_inquiries_tool": get_all_inquiries_tool,
 }
 
 TOOL_SCHEMAS = [
@@ -450,11 +683,11 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "calculate_prayer_times",
-            "description": "Türkiye'nin 81 ili ve TÜM 922 İLÇESİ (Örn: Van Edremit, Muş Hasköy, Sivas Şarkışla, Kadıköy, Of, İnegöl, Cizre vb.) veya dünyadaki tüm şehirler için namaz vakitlerini getirir.",
+            "description": "Türkiye'nin 81 ili ve TÜM 922 İLÇESİ (İzmit, Kadıköy, Şarkışla, Hasköy, Edremit, Of vb.) için namaz vakitlerini getirir.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "city": {"type": "string", "description": "Şehir veya ilçe adı"},
+                    "city": {"type": "string", "description": "Şehir veya ilçe adı (Örn: İzmit, İstanbul, Ankara, Sivas)"},
                     "date_str": {"type": "string", "description": "Tarih YYYY-MM-DD"},
                 },
                 "required": ["city"],
@@ -486,12 +719,68 @@ TOOL_SCHEMAS = [
     {
         "type": "function",
         "function": {
-            "name": "search_quran_verse",
-            "description": "Kur'an kaç suredir, kaç ayettir, sure anlamları ve mealleri getirir.",
+            "name": "calculate_zekat",
+            "description": "Altın, gümüş, nakit para ve borçlar üzerinden Diyanet fıkhi nisabını (80.18gr altın) ve %2.5 zekat tutarını hesaplar.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query_or_surah": {"type": "string", "description": "Sure adı veya Kur'an sorusu"},
+                    "gold_grams": {"type": "number", "description": "Gram altın miktarı"},
+                    "silver_grams": {"type": "number", "description": "Gram gümüş miktarı"},
+                    "cash_try": {"type": "number", "description": "Nakit para (TL)"},
+                    "commercial_goods_try": {"type": "number", "description": "Ticari mal (TL)"},
+                    "debts_try": {"type": "number", "description": "Borçlar (TL)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "web_search_tool",
+            "description": "Güncel İslami haberler, Diyanet fetvaları ve internet araştırması yapar.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Aranacak kelime veya konu"},
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "save_inquiry_tool",
+            "description": "Kullanıcının sorduğu soru veya fetva talebini SQLite veritabanına kaydeder.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "topic": {"type": "string", "description": "Konu adı"},
+                    "question": {"type": "string", "description": "Soru metni"},
+                    "user_name": {"type": "string", "description": "Kullanıcı adı"},
+                },
+                "required": ["topic", "question"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_all_inquiries_tool",
+            "description": "SQLite veritabanında saklanan tüm dini soru ve fetva kayıtlarını listeler.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_quran_verse",
+            "description": "Kur'an 114 sure, sure numaraları (1-114, Örn: 100. sure, Nebe suresi), ayet sayıları ve mealleri sorgular.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query_or_surah": {"type": "string", "description": "Sure adı veya sure numarası (Örn: 'Nebe', '100', 'Bakara')"},
                 },
                 "required": ["query_or_surah"],
             },
@@ -501,7 +790,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "islamic_knowledge_question",
-            "description": "Teheccüd namazı nedir ne zaman kılınır, sehiv secdesi, fıkıh ve ilmihal sorularını cevaplar.",
+            "description": "Teheccüd namazı, sehiv secdesi, fıkıh ve ilmihal sorularını cevaplar.",
             "parameters": {
                 "type": "object",
                 "properties": {

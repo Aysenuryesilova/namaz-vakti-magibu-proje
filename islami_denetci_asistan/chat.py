@@ -1,51 +1,78 @@
-
+"""
+==============================================================================
+İSLÂMİ UYGULAMA DOĞRULUK & KAYNAK DENETÇİSİ CLI TERMINAL ARAYÜZÜ (CHAT.PY)
+==============================================================================
+Bu dosya:
+1. Zengin Terminal (CLI - Rich kütüphanesi) üzerinden kullanıcı ile etkileşime geçer.
+2. Tool call adımlarını, parametrelerini ve renkli trace logları canlı basar.
+"""
 
 import sys
-import config
-import ollama_client
-import tools
-import islamic_rag
+import argparse
 
-def run_tool_calls(tool_calls: list[dict]) -> list[dict]:
-    """Modelin dinamik olarak çağırmak istediği araçları çalıştırır."""
-    messages = []
-    for call in tool_calls:
-        name = call["function"]["name"]
-        arguments = call["function"].get("arguments") or {}
-        print(f"\n  🔧 [ARAÇ ÇAĞRILDI]: {name}({arguments})")
+if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
-        function = tools.TOOLS.get(name)
-        if function is None:
-            output = f"'{name}' adında bir araç bulunamadı."
-        else:
-            try:
-                output = function(**arguments)
-            except Exception as exc:
-                output = f"Araç çalıştırılamadı: {exc}"
+from agent_engine import IslamicAgentEngine
+from database import get_all_inquiries
 
-        print(f"  📥 [ARAÇ ÇIKTISI]:\n{output}\n")
-        messages.append({"role": "tool", "content": str(output)})
-    return messages
+try:
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.markdown import Markdown
+    from rich.table import Table
+    RICH_AVAILABLE = True
+    console = Console()
+except ImportError:
+    RICH_AVAILABLE = False
+    console = None
+
+def print_banner():
+    if RICH_AVAILABLE:
+        console.print(Panel.fit(
+            "[bold green]🕌 İSLAMİ UYGULAMA DOĞRULUK & KAYNAK DENETÇİSİ (EZAN VAKTİ AGENT)[/bold green]\n"
+            "[cyan]Local LLM (Qwen2.5:3b) + Tool Calling + RAG + SQLite DB + DuckDuckGo Web Search[/cyan]\n"
+            "[yellow]Çıkmak için 'çık' veya 'exit' yazın.[/yellow]",
+            title="  İSLAMİ UYGULAMA DOĞRULUK & KAYNAK DENETÇİSİ (EZAN VAKTİ AGENT)",
+            border_style="green"
+        ))
+    else:
+        print("==================================================================")
+        print("  Local LLM (Qwen2.5:3b) + Tool Calling + RAG + SQLite DB")
+        print("  Çıkmak için 'çık' veya 'exit' yazın.")
+        print("==================================================================")
 
 def main():
-    print("==================================================================")
-    print("  İSLAMİ UYGULAMA DOĞRULUK & KAYNAK DENETÇİSİ (EZAN VAKTİ AGENT)")
-    print("==================================================================")
-    print(f"  • Sohbet Modeli : {config.CHAT_MODEL}")
-    print(f"  • Ollama Adresi : {config.OLLAMA_HOST}")
-    print("  • Çıkmak için   : 'çık' veya 'exit' yazın\n")
+    parser = argparse.ArgumentParser(description="İslami Denetçi Asistan CLI Arayüzü")
+    parser.add_argument("--query", type=str, help="Tek bir soru sorup çıkmak için")
+    args = parser.parse_args()
 
-    # RAG Veritabanı Kurulumu
-    try:
-        islamic_rag.seed_knowledge_base()
-    except Exception as e:
-        print(f"  [Not: RAG ilk yükleme: {e}]")
+    engine = IslamicAgentEngine()
+    print_banner()
 
-    messages = [{"role": "system", "content": config.SYSTEM_PROMPT}]
+    if args.query:
+        print(f"\n👤 Kullanıcı > {args.query}")
+        ans, logs, prompt = engine.run(args.query)
+        if logs:
+            for log in logs:
+                print(f"\n  🔧 [TOOL CALL]: {log['tool_name']}({log['arguments']})")
+                print(f"  📥 [RESULT]:\n{log['response']}")
+        if RICH_AVAILABLE:
+            console.print("\n🤖 [bold green]Denetçi Asistan >[/bold green]")
+            console.print(Markdown(ans))
+        else:
+            print(f"\n🤖 Denetçi Asistan >\n{ans}")
+        return
 
     while True:
         try:
-            user_input = input("Geliştirici/Kullanıcı > ").strip()
+            if RICH_AVAILABLE:
+                user_input = console.input("\n[bold cyan]Kullanıcı > [/bold cyan]").strip()
+            else:
+                user_input = input("\nKullanıcı > ").strip()
         except (EOFError, KeyboardInterrupt):
             print("\nÇıkış yapılıyor...")
             break
@@ -53,33 +80,27 @@ def main():
         if not user_input:
             continue
         if user_input.lower() in {"çık", "cik", "exit", "quit"}:
+            print("Görüşmek üzere!")
             break
 
-        messages.append({"role": "user", "content": user_input})
+        ans, logs, prompt = engine.run(user_input)
 
-        try:
-            # ReAct Döngüsü: Model araç çağırır, biz sonucu veririz, model cevabı tamamlar.
-            for round_num in range(config.MAX_TOOL_ROUNDS):
-                response_msg = ollama_client.chat(
-                    messages=messages,
-                    model=config.CHAT_MODEL,
-                    tools=tools.TOOL_SCHEMAS
-                )
-                messages.append(response_msg)
+        if logs:
+            for log in logs:
+                if RICH_AVAILABLE:
+                    console.print(f"\n  [bold yellow]🔧 [ARAÇ ÇAĞRILDI]:[/bold yellow] [bold white]{log['tool_name']}[/bold white]({log['arguments']})")
+                    console.print(Panel(str(log['response']), title="📥 Araç Çıktısı", border_style="yellow"))
+                else:
+                    print(f"\n  🔧 [ARAÇ ÇAĞRILDI]: {log['tool_name']}({log['arguments']})")
+                    print(f"  📥 [ARAÇ ÇİKİTİSİ]:\n{log['response']}\n")
 
-                tool_calls = response_msg.get("tool_calls")
-                if not tool_calls:
-                    break
-
-                tool_messages = run_tool_calls(tool_calls)
-                messages.extend(tool_messages)
-
-            final_answer = (response_msg.get("content") or "").strip()
-            print(f"\n🤖 Denetçi Asistan >\n{final_answer}\n")
+        if RICH_AVAILABLE:
+            console.print("\n🤖 [bold green]Denetçi Asistan >[/bold green]")
+            console.print(Markdown(ans))
+            console.print("[dim]" + "-" * 65 + "[/dim]")
+        else:
+            print(f"\n🤖 Denetçi Asistan >\n{ans}\n")
             print("-" * 65)
-
-        except Exception as exc:
-            print(f"\nHata oluştu: {exc}\n")
 
 if __name__ == "__main__":
     main()
