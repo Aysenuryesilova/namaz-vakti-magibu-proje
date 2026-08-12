@@ -2,16 +2,16 @@
 ==============================================================================
 İSLÂMİ DENETÇİ ASİSTAN - GRADIO WEB KULLANICI ARAYÜZÜ (APP.PY)
 ==============================================================================
-BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ AÇIKLAMA):
+BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ VE TEKNİK DÜZELTME):
 ------------------------------------------------------------------------------
-1. Gradio Web UI (Web Kullanıcı Arayüzü):
-   Kullanıcıların web tarayıcısı üzerinden (http://localhost:7860) asistanla
-   etkileşime girmesini sağlayan görsel kullanıcı arayüzüdür.
+1. Windows Uyumlu Sunucu Adresi (127.0.0.1):
+   Windows ortamındaki web tarayıcılarında (Chrome / Edge) '0.0.0.0' adresi
+   'ERR_ADDRESS_INVALID (-108)' hatası verir. Bu nedenle sunucu adresi
+   '127.0.0.1' (localhost) olarak yapılandırılmıştır.
 
-2. 3 Sekmeli Profesyonel Görsel Düzen:
-   - Sekme 1: Canlı Sohbet ve Bot (Chatbot Interface)
-   - Sekme 2: Araç Çağrı Logları & Şeffaf Trace İzleyici (Trace Logs Inspector)
-   - Sekme 3: SQLite Veritabanı Kayıt İnceleyici (Database Inspector Table)
+2. 3 Sekmeli Görsel Düzen:
+   - Sekme 1: Canlı Sohbet Arayüzü (Chatbot Interface)
+   - Sekme 2: SQLite Veritabanı Kayıt İnceleyici (Database Inspector Table)
 ==============================================================================
 """
 
@@ -28,16 +28,14 @@ def respond(user_message, chat_history):
     Gradio Sohbet Fonksiyonu:
     Kullanıcı mesajını alır, Agent Engine'i çalıştırır ve yanıtı web sohbetine ekler.
     """
-    if not user_message.strip():
+    if not user_message or not user_message.strip():
         return "", chat_history, "Henüz araç çağrılmadı."
 
-    # Agent Engine çalıştırma
     bot_response, trace_logs, _ = engine.run(user_message)
     
-    # Sohbet geçmişini güncelle (Gradio chatbot formatı)
+    # Gradio sohbet geçmişi günceleme
     chat_history.append((user_message, bot_response))
     
-    # Log ekranı metnini hazırlama
     logs_str = ""
     for log in trace_logs:
         logs_str += f"🔧 Tur #{log['turn']}: Araç '{log['tool_name']}' Çalıştırıldı\n"
@@ -60,7 +58,7 @@ def refresh_db():
 # ==============================================================================
 # GRADIO BLOCKS ARAYÜZ TASARIMI
 # ==============================================================================
-with gr.Blocks(title="🕌 İslami Denetçi Asistanı", theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="🕌 İslami Denetçi Asistanı") as demo:
     gr.Markdown(
         """
         # 🕌 İslami Uygulama Doğruluk ve Kaynak Denetçisi
@@ -96,5 +94,5 @@ with gr.Blocks(title="🕌 İslami Denetçi Asistanı", theme=gr.themes.Soft()) 
             refresh_btn.click(refresh_db, None, db_table)
 
 if __name__ == "__main__":
-    # Gradio Web Sunucusunu 7860 portunda başlat
-    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)
+    # Windows tarayıcıları (Chrome/Edge) için 127.0.0.1 adresi ile başlatma
+    demo.launch(server_name="127.0.0.1", server_port=7860, share=False)
