@@ -4,14 +4,14 @@ DİYANET İŞLERİ BAŞKANLIĞI GENEL İLMİHALİ VE İSLAMİ İLİMLER REHBERİ
 
 BÖLÜM 1: AKAİD VE İMAN ESASLARI (İMANIN 6 ŞARTI)
 ------------------------------------------------------------------------------
-1. Allah'a İman: Allah'ın varlığı ve birliği (Tevhid). Allah zatında, sıfatlarında ve fiillerinde tektir. Eşi, benzeri, dengi, çocuk edinmesi, denginin bulunması imkansızdır.
+1. Allah'a İman: Allah'ın varlığı ve birliği (Tevhid). Allah zatında, sıfatlarında ve fiillerinde tektir. Eşi, benzeri, dengi, çocuk edinmesi imkansızdır.
    - Zati Sıfatları: Vücut (Var olması), Kıdem (Ezeli olması), Beka (Ebedi olması), Vahdaniyet (Bir olması), Muhalefetün lil-havadis (Sonradan yaratılanlara benzememesi), Kıyam binefsihî (Varlığı kendinden olması).
    - Subuti Sıfatları: Hayat (Diri olması), İlim (Her şeyi bilmesi), Sem' (Her şeyi işitmesi), Basar (Her şeyi görmesi), İrade (Dilemesi), Kudret (Gücünün her şeye yetmesi), Kelam (Konuşması), Tekvin (Yaratması).
 
 2. Meleklere İman: Melekler nurdan yaratılmış, yemeyen, içmeyen, cinsiyeti olmayan, günah işlemeyen, Allah'ın emirlerini eksiksiz yerine getiren nurani varlıklardır.
    - Dört Büyük Melek: Cebrail (Vahiy meleği), Azrail (Ruhları kabzeden ölüm meleği), Mikail (Tabiat olayları ve rızık meleği), İsrafil (Sura üfleyen kıyamet meleği).
    - Kiramen Katibin: İnsanın sağında ve solunda bulunan sevap ve günahları yazan melekler.
-   - Mürker ve Nekir: Kabirde insana ilk sorguyu yapacak melekler.
+   - Münker ve Nekir: Kabirde insana ilk sorguyu yapacak melekler.
 
 3. Kitaplara İman: Allah'ın peygamberlerine indirdiği ilahi kitaplar.
    - Suhuflar: Hz. Adem (10), Hz. Şit (50), Hz. İdris (30), Hz. İbrahim (10).
@@ -73,16 +73,21 @@ Namaz dinin direğidir. Akıl baliğ olan her Müslümana farz-ı ayındır.
 
 2. Sehiv Secdesi (Yanılma Secdesi):
    Namazın vaciplerinden biri unutularak terk edilirse, geciktirilirse veya farzlardan biri geciktirilirse yapılır.
-   Yapılışı: Son oturuşta Ettehiyyatü okunduktan sonra iki tarafa selam verilir, ardından "Allahu Ekber" denilerek peş peşe 2 secde yapılır. Tekrar oturulup Ettehiyyatü, Salli-Barik ve Rabbena duaları okunarak selam varılır.
+   Yapılışı: Son oturuşta Ettehiyyatü okunduktan sonra iki tarafa selam verilir, ardından "Allahu Ekber" denilerek peş peşe 2 secde yapılır. Tekrar oturulup Ettehiyyatü, Salli-Barik ve Rabbena duaları okunarak selam verilir.
 
 3. Teheccüd Namazı:
    Yatsı namazından sonra gece uykudan uyanılarak İmsak (Sahur) vaktine kadar kılınan çok faziletli nafile namazdır. Gündüz kılınmaz. En faziletli vakti gecenin son üçte biridir. 2 ile 8 rekat arasında ikişer rekat olarak kılınır.
 
-4. Diğer Nafile Namazlar:
-   - Duha (Kuşluk) Namazı: Güneş doğduktan yaklaşık 45 dk sonra başlayıp öğle vaktine kadar kılınır.
+4. Diğer Nafile ve Özel Namazlar:
+   - Duha (Kuşluk) Namazı: Güneş doğduktan yaklaşık 45 dk sonra başlayıp öğle vaktine kadar kılınır (2-12 rekat).
    - Evvabin Namazı: Akşam namazından sonra kılınan 2-6 rekatlık namazdır.
    - Tahiyyetü'l-Mescid: Camiye girildiğinde kılınan 2 rekatlık hürmet namazı.
    - İstihare Namazı: Hayırlı bir karar vermek için kılınan 2 rekatlık namaz ve duası.
+   - Cuma Namazı: Akıl sağlığı yerinde, hür, mukim ve mazereti olmayan erkeklere farz-ı ayındır.
+   - Cenaze Namazı: Farz-ı kifayedir. Rükû ve secdesi olmayan, ayakta kılınan duadır.
+
+5. Kerahet Vakitleri:
+   Namaz kılınması mekruh olan 3 vakit vardır: Güneşin doğuş anı (yaklaşık 45 dk), Güneşin tam tepede olduğu an (istiva vakti) ve Güneş batarken (sadece o günün ikindi namazının farzı kılınabilir).
 
 
 BÖLÜM 4: ORUÇ VE RAMAZAN FIKHI
@@ -100,6 +105,7 @@ Oruç (Savm), imsak vaktinden akşam ezanına (iftar vaktine) kadar yeme, içme 
 3. Orucu Bozmayan Durumlar:
    - Unutarak yemek içmek (Hatırlayınca ağız çalkalanıp devam edilir).
    - Kan vermek, göz damlası damlatmak, banyo yapmak, diş fırçalamak (macun yutmamak şartıyla).
+   - Unutarak yiyip içen kişiye oruçlu olduğu hatırlatılmalıdır; ancak yaşlı ve zayıf biriyse hatırlatmamak daha sevaptır.
 
 
 BÖLÜM 5: ZEKAT VE SADAKA FIKHI
@@ -111,19 +117,50 @@ Zekat, dinen zengin sayılan (nisap miktarı mala sahip) Müslümanların yılda
    Fakirler, miskinler (hiçbir şeyi olmayanlar), zekat memurları, kalpleri İslama ısındırılacak olanlar (Müellefe-i Kulûb), köleler, borçlular, Allah yolunda olanlar (fi sebilillah) ve yolda kalmış yolcular.
 3. Zekat Verilemeyecek Kişiler:
    Anne, baba, dede, nene (Üstsoy), çocuklar, torunlar (Altsoy) ve eşler birbirine zekat veremez.
+4. Sadaka-i Fıtır (Fitre): Ramazan ayında bayramdan önce verilmesi vacip olan mali bir ibadettir. Bir kişinin bir günlük asgari gıda ihtiyacı kadardır.
 
 
-BÖLÜM 6: KUR'AN-I KERİM İLİMLERİ
+BÖLÜM 6: HAC VE UMRE FIKHI
 ------------------------------------------------------------------------------
-1. Sure ve Ayet Sayısı: Kur'an-ı Kerim 114 Sure, 6.236 Ayet ve 30 Cüzden oluşur.
-2. İlk İnen Ayetler: Alak Suresi 1-5. ayetler ("İkra / Oku" emri).
-3. En Uzun ve En Kısa Sureler: En uzun sure Bakara Suresi (286 ayet), en kısa sure Kevser Suresi (3 ayet).
-4. Ankebut Suresi: 29. Suredir, 69 ayettir. Kelime anlamı "Örümcek" demektir. İnkarcıların dayandığı güçlerin örümcek ağı gibi çürük olduğu anlatılır.
-5. Yasin Suresi: 36. Suredir, 83 ayettir. Kur'an'ın kalbi kabul edilir.
-6. Ayet-el Kürsi: Bakara Suresi 255. ayettir. Allah'ın kürsüsünü, yüceliğini ve kainat üzerindeki mutlak hakimiyetini anlatır.
+Hac, ömründe bir defa imkanı olan Müslümanlara farz olan mali ve bedeni bir ibadettir.
+
+1. Haccın Farzları (3 Farz):
+   - İhrama Girmek (Şart): Mikat sınırında ihram örtüsüne bürünüp niyet etmek.
+   - Arafat'ta Vakfe Yapmak (Rükn): Arife günü Arafat bölgesinde bir müddet bulunmak.
+   - Kabe'yi Ziyaret Tavafı (Rükn): Bayram günlerinde Kabe'nin etrafında 7 defa dönmek.
+
+2. Umre: İhrama girerek Kabe'yi tavaf etmek ve Safa ile Merve arasında sa'y yapmaktan ibaret sünnet olan bir ibadettir. Belirli bir vakti yoktur.
 
 
-BÖLÜM 7: KELAM VE AKLI İMAN DELİLLERİ (ATEİZM VE DEİZME CEVAPLAR)
+BÖLÜM 7: KURBAN FIKHI
+------------------------------------------------------------------------------
+Kurban, Kurban Bayramı günlerinde ibadet niyetiyle belirli hayvanları kesmektir. Dinen zengin (nisap miktarı mala sahip) Müslümanlara vaciptir.
+
+1. Kurbanlık Hayvanlar ve Yaş Şartları:
+   - Koyun ve Keçi: 1 yaşını doldurmuş olmalıdır (Koyun 6 aylık olup 1 yaşında gibi gösterişliyse kurban edilebilir). 1 kişi adına kesilir.
+   - Sığır ve Manda: 2 yaşını doldurmuş olmalıdır. 1 ile 7 kişi ortaklaşa kesebilir.
+   - Deve: 5 yaşını doldurmuş olmalıdır. 1 ile 7 kişi ortaklaşa kesebilir.
+
+2. Kurban Etinin Dağıtımı: Kurban eti 3 eşit parçaya bölünür: Bir kısmı evde aileye ayrılır, bir kısmı komşu ve akrabalara ikram edilir, bir kısmı ise fakir ve muhtaçlara dağıtılır.
+
+
+BÖLÜM 8: YEMİN VE YEMİN KAFFARETİ
+------------------------------------------------------------------------------
+Yemin, Allah'ın adını anarak bir işi yapacağına veya yapmayacağına dair söz vermektir.
+1. Yemin Türleri: Lagv (boş laf), Gamûs (yalan yemin - büyük günahtır), Mün'akit (geleceğe dair yemin).
+2. Yemin Kefareti: Geleceğe dair yemini bozan kişi kefaret öder. Kefaret: 10 fakiri giydirmek veya 10 fakire bir günlük yiyecek yedirmektir. Gücü yetmeyen 3 gün peş peşe oruç tutar.
+
+
+BÖLÜM 9: HELAL VE HARAM FIKHI (YİYECEKLER VE İÇECEKLER)
+------------------------------------------------------------------------------
+1. Haram Olan Yiyecek ve İçecekler:
+   - Kendiliğinden ölmüş hayvan (meyte), akan kan, domuz eti ve Allah'tan başkası adına kesilen hayvanlar (Bakara 173).
+   - Sarhoşluk veren her türlü alkollü içecek ve uyuşturucu madde haramdır ("Çoğu sarhoş eden şeyin azı da haramdır").
+   - Keskin dişli avcı hayvanların ve yırtıcı kuşların eti haramdır.
+2. Helal Olanlar: Denizden çıkan her türlü balık ve deniz ürünü helaldir. Usulüne uygun kesilen otobur hayvanlar helaldir.
+
+
+BÖLÜM 10: KELAM VE AKLI İMAN DELİLLERİ (ATEİZM VE DEİZME CEVAPLAR)
 ------------------------------------------------------------------------------
 1. Nizam ve Gaye Delili (Teleolojik Ayar Delili):
    Evrendeki kütleçekim kuvveti, atomik bağlar, Dünya'nın Güneş'e mesafesi ve atmosfer bileşimi milimetrik bir hassasiyetle ayarlanmıştır. Tek bir canlı hücresindeki DNA dizilimi kütüphaneler dolusu bilgi içerir. Bilgi ve düzen, ancak sonsuz ilim ve kudret sahibi bir Yaratıcı (Allah) ile açıklanabilir.
@@ -132,6 +169,6 @@ BÖLÜM 7: KELAM VE AKLI İMAN DELİLLERİ (ATEİZM VE DEİZME CEVAPLAR)
    Evren sonradan var olmuştur (Big Bang teorisi). Sonradan var olan her şeyin bir var edene (Muhdis) ihtiyacı vardır. O var eden de ezeli ve ebedi olan Allah'tır.
 
 3. Kur'an'ın Bilimsel Mucizeleri:
-   - Evrenin Genişlemesi (Zariyat 47): "Göğü gücümüzle biz kurduk ve şüphesiz biz onu genişletmekteyiz." (Hubble evrenin genişlediğini 1929'da bulmuştur).
-   - Dağların Kökleri (Nebe 6-7): "Biz yeryüzünü beşik, dağları da kazık yapmadık mı?" (Jeolojide dağların çadır kazığı gibi yer altına inen derin kökleri kanıtlanmıştır).
+   - Evrenin Genişlemesi (Zariyat 47): "Göğü gücümüzle biz kurduk ve şüphesiz biz onu genişletmekteyiz." (Hubble 1929).
+   - Dağların Kökleri (Nebe 6-7): "Biz yeryüzünü beşik, dağları da kazık yapmadık mı?"
    - Canlıların Sudan Yaratılması (Enbiya 30): "Her canlı şeyi sudan yarattığımızı görmediler mi?"
