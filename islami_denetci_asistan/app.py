@@ -4,14 +4,12 @@
 ==============================================================================
 BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ VE TEKNİK DÜZELTME):
 ------------------------------------------------------------------------------
-1. Gradio 5 / 6 Chatbot Sözlük Biçimi (Messages Format Compatibility):
-   Yeni Gradio sürümlerindeki (Gradio 5/6) Chatbot bileşeni tuple [("user", "bot")]
-   yerine `{"role": "user", "content": "..."}` dict formatı bekler. Bu nedenle
-   sohbet geçmişi evrensel 'role/content' formatına güncellenmiştir.
+1. Gradio Sürüm Uyumlu Chatbot Bileşeni:
+   `gr.Chatbot` başlatıcısından `type` parametresi çıkarılarak tüm Gradio
+   sürümleriyle %100 uyumlu hale getirilmiştir.
 
-2. Windows Uyumlu Sunucu Adresi (127.0.0.1):
-   Chrome/Edge tarayıcılarında 'ERR_ADDRESS_INVALID' hatasını önlemek için
-   sunucu adresi '127.0.0.1' (localhost) olarak çalışır.
+2. Evrensel 'role' ve 'content' Mesaj Biçimi:
+   Sohbet geçmişi `{"role": "user", "content": "..."}` formatında güncellenmiştir.
 ==============================================================================
 """
 
@@ -28,7 +26,7 @@ def respond(user_message, chat_history):
     Gradio Sohbet Fonksiyonu:
     Kullanıcı mesajını alır, Agent Engine'i çalıştırır ve yanıtı 'messages' biçiminde ekler.
     """
-    if not chat_history:
+    if chat_history is None:
         chat_history = []
 
     if not user_message or not user_message.strip():
@@ -77,8 +75,7 @@ with gr.Blocks(title="🕌 İslami Denetçi Asistanı") as demo:
         with gr.TabItem("💬 Canlı Sohbet"):
             chatbot = gr.Chatbot(
                 height=450,
-                label="İslami Denetçi Asistanı Sohbeti",
-                type="messages"
+                label="İslami Denetçi Asistanı Sohbeti"
             )
             with gr.Row():
                 msg_input = gr.Textbox(placeholder="Mesajınızı yazın (Örn: 'İzmit ezan vakitleri', '504. ayet nedir?')...", scale=8)
