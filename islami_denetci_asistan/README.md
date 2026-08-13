@@ -28,23 +28,43 @@
 
 ---
 
-## 🔬 Matematiksel TF-IDF & Kosinüs Benzerlikli RAG Mimarisi
+## 🏛️ Mimari Tasarım ve Temiz Kod Prensipleri (Clean Architecture)
 
-Sistemdeki RAG mimarisi (`islamic_rag.py`) rastgele veya yüzeysel metin eşleştirme yerine matematiksel olarak doğrulanmış **TF-IDF Vektör Uzağı** algoritması kullanır:
+Projede `ollama_asistan` şablonundaki temel mantık korunmuş; ancak kod okunabilirliğini ve sürdürülebilirliğini artırmak adına **Clean Architecture (Single Responsibility Principle)** uygulanarak modülerleştirilmiştir:
 
-1. **Terim Frekansı (Term Frequency - TF):**
-   $$TF(w, d) = \frac{\text{Kelime } w \text{'nin Doküman } d \text{ İçindeki Frekansı}}{\text{Dokümandaki Toplam Kelime Sayısı}}$$
+- **`config.py`**: Model parametreleri, zamanaşımı ve System Prompt anayasası.
+- **`ollama_client.py`**: 30 sn timeout ve 2x retry mekanizması ile güçlendirilmiş Ollama REST API istemcisi.
+- **`agent_engine.py`**: ReAct döngüsü, araç yürütme ve NLU Fallback mantığı.
+- **`tools.py`**: 11 işlevsel aracın (Namaz, Kıble, Zekat, Hadis, Esma vb.) mantıksal motoru.
+- **`islamic_rag.py`**: TF-IDF & Kosinüs Benzerliği vektör arama motoru.
+- **`database.py`**: SQLite3 ilişkisel veritabanı CRUD katmanı.
+- **`chat.py` & `app.py`**: Rich CLI Terminal ve Gradio Web UI sunum katmanları.
 
-2. **Ters Doküman Frekansı (Inverse Document Frequency - IDF):**
-   $$IDF(w) = \log\left(1.0 + \frac{N}{1.0 + DF(w)}\right)$$
-   *(N: Toplam doküman sayısı (201+), DF(w): Kelimenin geçtiği doküman sayısı)*
+---
 
-3. **TF-IDF Ağırlık Çarpımı & Vektörleşme:**
-   $$V(w, d) = TF(w, d) \times IDF(w)$$
+## 🔬 Matematiksel TF-IDF & Kosinüs Benzerlikli RAG Mimarisi (ChromaDB / PGVector Karşılaştırması)
 
-4. **Kosinüs Benzerliği Açısı (Cosine Similarity) & Eşik Filtresi:**
-   $$\text{Cosine Similarity}(\vec{q}, \vec{d}) = \frac{\vec{q} \cdot \vec{d}}{\|\vec{q}\| \|\vec{d}\|}$$
-   *(Eşik Değeri: Similarity $\ge 0.05$ altındaki alakasız sonuçlar kesinlikle elenir).*
+Sistemdeki RAG mimarisi (`islamic_rag.py`) ChromaDB veya PGVector gibi C++ derleyici bağımlılığı olan harici vektör veritabanlarına ihtiyaç duymadan yerel ortamda anında çalışan **Matematiksel TF-IDF Vektör Uzayı** kullanır:
+
+1. **Neden Saf Python TF-IDF RAG?**
+   - **Sıfır Bağımlılık (Zero-Dependency):** Yerel sistemde SQLite/ChromaDB sürücü uyumsuzluğu veya C++ derleyici hatası yaşanmasını engeller.
+   - **%100 Deterministik:** Kelime frekansı ve kosinüs açısı üzerinden matematiksel olarak doğrulanabilir sonuç verir.
+   - **ChromaDB / PGVector Uyumluluğu:** `search_rag(query)` arabirimi standardize edildiği için istendiğinde arkasına ChromaDB / PGVector sürücüsü saniyeler içinde takılabilir.
+
+2. **Formülasyon:**
+   - **Terim Frekansı (Term Frequency - TF):**
+     $$TF(w, d) = \frac{\text{Kelime } w \text{'nin Doküman } d \text{ İçindeki Frekansı}}{\text{Dokümandaki Toplam Kelime Sayısı}}$$
+
+   - **Ters Doküman Frekansı (Inverse Document Frequency - IDF):**
+     $$IDF(w) = \log\left(1.0 + \frac{N}{1.0 + DF(w)}\right)$$
+     *(N: Toplam doküman sayısı (201+), DF(w): Kelimenin geçtiği doküman sayısı)*
+
+   - **TF-IDF Ağırlık Çarpımı & Vektörleşme:**
+     $$V(w, d) = TF(w, d) \times IDF(w)$$
+
+   - **Kosinüs Benzerliği Açısı (Cosine Similarity) & Eşik Filtresi:**
+     $$\text{Cosine Similarity}(\vec{q}, \vec{d}) = \frac{\vec{q} \cdot \vec{d}}{\|\vec{q}\| \|\vec{d}\|}$$
+     *(Eşik Değeri: Similarity $\ge 0.05$ altındaki alakasız sonuçlar kesinlikle elenir).*
 
 ---
 

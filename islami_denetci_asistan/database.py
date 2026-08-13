@@ -25,10 +25,27 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "islamic_assistant.db")
 def get_connection():
     """
     SQLite Veritabanı Bağlantı Oluşturucu:
-    Veritabanı dosyası yoksa otomatik oluşturur ve bağlantı nesnesini döndürür.
+    Veritabanı dosyası yoksa veya bozuksa otomatik sıfırlayıp bağlantı nesnesini döndürür.
     """
+    if os.path.exists(DB_PATH):
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            cursor.fetchall()
+            return conn
+        except (sqlite3.DatabaseError, sqlite3.OperationalError):
+            try:
+                conn.close()
+            except Exception:
+                pass
+            try:
+                os.remove(DB_PATH)
+            except Exception:
+                pass
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row # Sütun isimlerine sözlük mantığıyla erişmeyi sağlar
+    conn.row_factory = sqlite3.Row
     return conn
 
 def init_database():

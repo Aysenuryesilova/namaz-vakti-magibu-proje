@@ -109,8 +109,10 @@ def run_benchmark():
         print(f"\n[Test #{test['id']}] {test['name']}")
         print(f"  • Sorgu: '{test['query']}'")
 
+        t_start = time.time()
         try:
             ans, logs, _ = engine.run(test["query"])
+            t_elapsed = time.time() - t_start
             called_tools = [log["tool_name"] for log in logs]
             
             # SIKI BAŞARI KRİTERİ:
@@ -121,12 +123,13 @@ def run_benchmark():
 
             if tool_ok and keyword_ok:
                 passed_count += 1
-                print(f"  ✅ [BAŞARILI] Araç: {called_tools} | Doğrulama Kelimesi '{test['expected_keyword']}' Bulundu.")
+                print(f"  ✅ [BAŞARILI] (Süre: {t_elapsed:.2f}s) | Araç: {called_tools} | Kelime '{test['expected_keyword']}' Bulundu.")
             else:
-                print(f"  ❌ [BAŞARISIZ] Araç Uyumlu mu: {tool_ok} | Kelime Uyumlu mu: {keyword_ok}")
+                print(f"  ❌ [BAŞARISIZ] (Süre: {t_elapsed:.2f}s) | Araç Uyumlu: {tool_ok} | Kelime Uyumlu: {keyword_ok}")
                 print(f"     Çağrılan Araçlar: {called_tools}")
         except Exception as exc:
-            print(f"  ❌ [HATA]: {exc}")
+            t_elapsed = time.time() - t_start
+            print(f"  ❌ [HATA] (Süre: {t_elapsed:.2f}s): {exc}")
 
     elapsed_time = time.time() - start_time
     pass_rate = (passed_count / len(BENCHMARK_TEST_SUITE)) * 100

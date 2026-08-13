@@ -13,6 +13,14 @@ BU MODÜL NEYİ SAĞLAR? (EĞİTİCİ AÇIKLAMA):
    - TEMPERATURE: 0.1 (Sıfıra yakın değerler modelin yaratıcı uydurmalar yapmasını
      engeller, kararlı ve kesin yanıtlar vermesini sağlar).
    - MAX_TOOL_ROUNDS: Modelin ardışık olarak kaç araç çağırabileceğini sınırlar.
+
+3. Temiz Mimari ve Vektör Veritabanı Seçimi (Architectural Rationale):
+   - Modüler Kod Mimarısı: Kodun tek bir dev dosya (monolith) yerine katmanlarına
+     (config, client, engine, tools, db, rag, ui) ayrılması Clean Architecture
+     prensipleri gereğidir.
+   - Vektör RAG Motoru: Ağır ve karmaşık dış bağımlılıklar (ChromaDB/PGVector C++ bağları)
+     yerine sıfır bağımlılıklı, %100 kararlı ve hızlı matematiksel TF-IDF & Kosinüs Benzerliği
+     Vektör Motoru (`islamic_rag.py`) tercih edilmiştir.
 ==============================================================================
 """
 

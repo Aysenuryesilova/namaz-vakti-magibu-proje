@@ -51,16 +51,22 @@ def chat(messages: list[dict], model: str = config.CHAT_MODEL, tools: list[dict]
     if tools:
         payload["tools"] = tools
 
-    try:
-        # Ollama sunucusuna 15 saniyelik zaman aşımı ile HTTP POST gönder
-        response = requests.post(url, json=payload, timeout=15)
-        if response.status_code == 200:
-            res_json = response.json()
-            return res_json.get("message", {"role": "assistant", "content": ""})
-        else:
-            raise RuntimeError(f"Ollama API hatası: HTTP Status {response.status_code}")
-    except Exception as exc:
-        raise RuntimeError(f"Ollama sunucusuna ulaşılamadı veya zaman aşımı: {exc}")
+    # İnce Detay İyileştirmesi: İlk model yükleme gecikmeleri (cold start) için 30 sn timeout ve 2 deneme (retry) hakkı
+    max_retries = 2
+    for attempt in range(max_retries):
+        try:
+            # Ollama sunucusuna 30 saniyelik zaman aşımı ile HTTP POST gönder
+            response = requests.post(url, json=payload, timeout=30)
+            if response.status_code == 200:
+                res_json = response.json()
+                return res_json.get("message", {"role": "assistant", "content": ""})
+            else:
+                raise RuntimeError(f"Ollama API hatası: HTTP Status {response.status_code}")
+        except Exception as exc:
+            if attempt == max_retries - 1:
+                raise RuntimeError(f"Ollama sunucusuna ulaşılamadı veya zaman aşımı ({attempt+1}/{max_retries}): {exc}")
+            import time
+            time.sleep(1)
 
 if __name__ == "__main__":
     # Basit Bağlantı ve Test Fonksiyonu

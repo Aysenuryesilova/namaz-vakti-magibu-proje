@@ -13,6 +13,13 @@ BU MODÜL NEYİ SAĞLAR? (NLP VE STOP-WORDS DÜZELTMESİ):
 2. Konu Başlığı Ağırlıklandırması (Topic Boosting):
    Dokümanın konu başlığındaki fıkhi terimlere 3 kat TF-IDF ağırlığı (Topic Boost)
    verilerek tam isabetli arama sağlanır.
+
+3. Vektör Veritabanı Mimarisi (ChromaDB / PGVector Uyumlu Karşılaştırma):
+   Projede ChromaDB veya PGVector gibi harici/ağır veritabanı sürücüleri yerine
+   yerel ortamda C++ derleyici bağımlılığı yaratmayan, sıfır-dependency, anında
+   çalışan matematiksel TF-IDF & Kosinüs Benzerliği vektör motoru tercih edilmiştir.
+   İstenildiği takdirde aynı `search_rag(query)` arabirimi arkasına ChromaDB veya
+   PGVector kolaylıkla eklenebilir.
 ==============================================================================
 """
 
